@@ -2,6 +2,7 @@ import java.util.Vector;
 import java.util.Enumeration;
 import java.io.*;
 
+
 public abstract class NetworkSimulator {
 	// This constant controls the maximum size of the buffer in a Message
 	// and in a Packet
@@ -114,7 +115,6 @@ public abstract class NetworkSimulator {
 				} else {
 					System.out.println("INTERNAL PANIC: Packet has " + "arrived for unknown entity");
 				}
-
 				break;
 
 			case FROMLAYER5:
@@ -165,8 +165,8 @@ public abstract class NetworkSimulator {
 		}
 
 		// arrival time 'x' is uniform on [0, 2*avgMessageDelay]
-		// having mean of avgMessageDelay. Should this be made
-		// into a Gaussian distribution?
+		// having mean of avgMessageDelay. 
+		// Should this be made into a Gaussian distribution?
 		double x = 2 * avgMessageDelay * rand.nextDouble(0);
 		Event next = new Event(time + x, FROMLAYER5, A);
 
@@ -178,7 +178,11 @@ public abstract class NetworkSimulator {
 		}
 
 	}
-
+	
+	/*
+	 * calling_entityis either 0 (for stopping the A-side timer) 
+	 * or 1 (for stopping the B-side timer).
+	 * */
 	protected void stopTimer(int entity) {
 		if (traceLevel > 2) {
 			System.out.println("stopTimer: stopping timer at " + time);
@@ -192,7 +196,20 @@ public abstract class NetworkSimulator {
 			System.out.println("stopTimer: Warning: Unable to cancel your " + "timer");
 		}
 	}
-
+	
+	/*
+	 * calling_entityis either 0 (for starting the A-side timer) 
+	 * or 1 (for starting the B-side timer), 
+	 * and increment is a double value indicating the amount of time 
+	 * that will pass before the timer interrupts. 
+	 * A's timer should only be started (or stopped) by A-side routines, 
+	 * and similarly for the B-side timer. 
+	 * Note that since we only care about unidirectional data transfer from A to B, 
+	 * only the A-side should maintain such timer. 
+	 * To give you an idea of the appropriate increment value to use: 
+	 * a packet sent into the network takes an average of 5 time units 
+	 * to arrive at the other side when there are no other messages in the medium. 
+	 * */
 	protected void startTimer(int entity, double increment) {
 		if (traceLevel > 2) {
 			System.out.println("startTimer: starting timer at " + time);
@@ -209,7 +226,13 @@ public abstract class NetworkSimulator {
 			eventList.add(timer);
 		}
 	}
-
+	
+	/*
+	 * calling_entityis either 0 (for the A-side send) or 1 (for the B-side send), 
+	 * and packet is a structure of type pkt. 
+	 * Calling this routine will cause the packet to be sent into the network, 
+	 * destined for the other entity.
+	 * */
 	protected void toLayer3(int callingEntity, Packet p) {
 		nToLayer3++;
 
@@ -266,7 +289,6 @@ public abstract class NetworkSimulator {
 				String payload = packet.getPayload();
 
 				if (payload.length() > 0)
-
 					payload = "?" + payload.substring(1);
 
 				else
@@ -287,7 +309,13 @@ public abstract class NetworkSimulator {
 		Event arrival = new Event(arrivalTime, FROMLAYER3, destination, packet);
 		eventList.add(arrival);
 	}
-
+	
+	/*
+	 * message is a structure of type msg to be passed up to layer 5 of the B-side. 
+	 * Note that we simplified the interface here 
+	 * so you don't need to explicitly specify calling_entity (A-side or B-side) 
+	 * since we are only dealing with unidirectional data delivery to the B-side.
+	 * */
 	protected void toLayer5(String dataSent) {
 		try {
 			outFile.write(dataSent, 0, MAXDATASIZE);

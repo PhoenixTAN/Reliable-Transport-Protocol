@@ -32,4 +32,5 @@ public class Message {
 	public String getData() {
 		return data;
 	}
+	
 }

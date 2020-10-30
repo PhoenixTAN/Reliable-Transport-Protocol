@@ -1,6 +1,5 @@
 import java.io.*;
 
-
 /**
  * @author CS-655
  * @description 
@@ -12,11 +11,15 @@ import java.io.*;
  * 		5. Enter window size.
  * 		6. Enter random seed.
  * 		7. Enter timeout retransmission.
+ * 		8. Enter a tracing value of 1 or 2 
+ * 			will print out useful information about 
+ * 			what is going on inside the emulation 
+ * 			(e.g., what's happening to packets and timers).
  * 		Finally, new a StudentNetworkSimulator and run it. 
  */
 public class Project {
 	public final static void main(String[] argv) {
-		StudentNetworkSimulator simulator;
+		StopAndWaitSimulator simulator;
 
 		int numOfMessages = -1;
 		double loss = -1;
@@ -200,7 +203,7 @@ public class Project {
 			}
 		}
 		
-		simulator = new StudentNetworkSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 
 		simulator.runumOfMessagesulator();
 	}
