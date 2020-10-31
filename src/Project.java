@@ -44,7 +44,13 @@ public class Project {
 				System.out.println("IOError reading your input!");
 				System.exit(1);
 			}
-// 、、asdfasdfasdf
+
+			///////////////////////////////
+			///////////////////////////////
+			//////////////////////////////
+			/////////////////////////////////
+			
+
 			if (buffer.equals("")) {
 				numOfMessages = 10;
 			} else {
