@@ -115,6 +115,13 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		retransmitInterval = timeout;
 	}
 
+	// TODO
+	private int checksumOfString(String text) {
+		
+		
+		return 0;
+	}
+
 	/**
 	 * This routine will be called once, before any of your other A-side
 	 * routines are called. It can be used to do any required initialization
@@ -181,12 +188,32 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * */
 	protected void aInput(Packet packet) {
 		int ackNum = packet.getAcknum();
-		// checksum
+
+		int checksum = packet.getChecksum();
+		
 
 		switch(senderState) {
 			case 1:
+				// sender is waiting for ACK 0
+				// if the packet is corrupted or ack is 1
+				// then do nothing
+				
+				// if not corrupted and ack is 0
+				// then stop timer and wait for call 1 from above
+				if ( ackNum == 0 && checksum == checksumOfString(packet.getPayload()) ) {
+					stopTimer(0);
+					senderState++;
+				}
+				break;
 			case 3:
-
+				if ( ackNum == 1 && checksum == checksumOfString(packet.getPayload()) ) {
+					stopTimer(0);
+					senderState = 0;	// wait for call 0 from above
+				}
+				break;
+			default:
+				System.out.println("Unexpected sender state in aInput().");
+				
 		}
 
 	}
@@ -203,6 +230,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				Packet packet = senderBuffer.peak();
 				toLayer3(0, new Packet(packet));	// udt_send()
 				startTimer(0, retransmitInterval);
+				break;
 			default:
 				System.out.println("Unexpected sender state in aTimerInterrupt()");
 		}
@@ -225,7 +253,23 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * from the A-side.
 	 * */
 	protected void bInput(Packet packet) {
-
+		int seqNum = packet.getSeqnum();
+		int checksum = packet.getChecksum();
+		
+		switch(receiverState) {
+			case 0:
+				// if corrupted or sequence number is 1
+				if ( checksum != checksumOfString(packet.getPayload()) || seqNum == 1) {
+					Packet pkt = new Packet(0, 1, 0);
+					
+				}
+			case 1:
+				
+			default:
+				System.out.println("Unexpected sender state in bInput()");
+				
+		}
+		
 	}
 
 

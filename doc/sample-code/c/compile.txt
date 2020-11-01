@@ -1,0 +1,22 @@
+#
+# Shell script for compiling program.
+#
+
+#
+# Compile with the GNU C compiler:
+#   spectacle% gcc -v
+#   Reading specs from /usr/local/lib/gcc-lib/sparc-sun-solaris2.4/2.7.2/specs
+#   gcc version 2.7.2
+
+#
+# Compiled and run on Solaris machines:
+#   spectacle% uname -a
+#   SunOS spectacle 5.5.1 Generic_103640-20 sun4u sparc SUNW,Ultra-Enterprise
+#
+#   tmendez-ultra% uname -a
+#   SunOS tmendez-ultra 5.6 Generic_105181-06 sun4u sparc SUNW,Ultra-60
+#
+
+#
+# Compilation commands:
+gcc -g pa2.c -o pa2

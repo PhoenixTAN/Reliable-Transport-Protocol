@@ -1,0 +1,1 @@
+make -f pa2.mak
