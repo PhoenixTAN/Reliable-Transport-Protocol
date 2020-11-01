@@ -158,7 +158,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				senderBuffer.add(new Packet(packet));
 
 				toLayer3(0, packet);	// udt_send(packet)
-				this.startTimer(0, retransmitInterval);
+				startTimer(0, retransmitInterval);
 
 				// update sequence number
 				senderSequenceNumber = (senderSequenceNumber + 1) % limitSeqNo;
@@ -261,10 +261,30 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				// if corrupted or sequence number is 1
 				if ( checksum != checksumOfString(packet.getPayload()) || seqNum == 1) {
 					Packet pkt = new Packet(0, 1, 0);
-					
+					toLayer3(1, pkt);
 				}
+				// if sequence number is 0
+				else if( checksum == checksumOfString(packet.getPayload()) && seqNum == 0){
+					toLayer5(packet.getPayload());
+					Packet pkt = new Packet(0, 0, 0);
+					toLayer3(1, pkt);
+					receiverState++;
+				}
+				break;
 			case 1:
-				
+				// if corrupted or sequence number is 0
+				if ( checksum != checksumOfString(packet.getPayload()) || seqNum == 0) {
+					Packet pkt = new Packet(1, 0, 0);
+					toLayer3(1, pkt);
+				}
+				// if sequence number is 1
+				else if( checksum == checksumOfString(packet.getPayload()) && seqNum == 1){
+					toLayer5(packet.getPayload());
+					Packet pkt = new Packet(1, 1, 0);
+					toLayer3(1, pkt);
+					receiverState = 0;
+				}
+				break;
 			default:
 				System.out.println("Unexpected sender state in bInput()");
 				
