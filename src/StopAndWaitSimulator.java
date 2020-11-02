@@ -1,5 +1,6 @@
-import java.util.*;
-import java.io.*;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
+
 import utils.SlidingWindowQueue;
 
 
@@ -115,11 +116,16 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		retransmitInterval = timeout;
 	}
 
-	// TODO
-	private int checksumOfString(String text) {
+
+	private long getChecksumOfPacket(Packet packet) {
 		
+		String text = packet.getSeqnum() + packet.getAcknum() + packet.getPayload();
+		byte[] bytes = text.getBytes();
 		
-		return 0;
+		Checksum crc32 = new CRC32();
+		crc32.update(bytes, 0, bytes.length);
+		
+		return crc32.getValue();
 	}
 
 	/**
@@ -155,6 +161,8 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				}
 				else {
 					packet = new Packet(senderSequenceNumber, 0, 0, new String(message.getData()));
+					long checksum = getChecksumOfPacket(packet);
+					packet.setChecksum(checksum);
 				}
 
 				// then buffer the new message if the buffer is not full
@@ -195,7 +203,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		System.out.println("Calling aInput()...");
 		int ackNum = packet.getAcknum();
 
-		int checksum = packet.getChecksum();
+		long checksum = packet.getChecksum();
 		
 		switch(senderState) {
 			case 1:
@@ -205,7 +213,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				
 				// if not corrupted and ack is 0
 				// then stop timer and wait for call 1 from above
-				if ( ackNum == 0 && checksum == checksumOfString(packet.getPayload()) ) {
+				if ( ackNum == 0 && checksum == getChecksumOfPacket(packet) ) {
 					stopTimer(0);
 					senderState++;
 					int baseNum = senderBuffer.getFirst().getSeqnum();
@@ -213,7 +221,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				}
 				break;
 			case 3:
-				if ( ackNum == 1 && checksum == checksumOfString(packet.getPayload()) ) {
+				if ( ackNum == 1 && checksum == getChecksumOfPacket(packet) ) {
 					stopTimer(0);
 					senderState = 0;	// wait for call 0 from above
 					int baseNum = senderBuffer.getFirst().getSeqnum();
@@ -266,33 +274,38 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		
 		System.out.println("Calling bInput()...");
 		int seqNum = packet.getSeqnum();
-		int checksum = packet.getChecksum();
+		long checksum = packet.getChecksum();
 		
 		switch(receiverState) {
 			case 0:
 				// if corrupted or sequence number is 1
-				if ( checksum != checksumOfString(packet.getPayload()) || seqNum == 1) {
+				if ( checksum != getChecksumOfPacket(packet) || seqNum == 1) {
+					
 					Packet pkt = new Packet(0, 1, 0);
+					pkt.setChecksum(getChecksumOfPacket(pkt));
 					toLayer3(1, pkt);
 				}
 				// if sequence number is 0
-				else if( checksum == checksumOfString(packet.getPayload()) && seqNum == 0){
+				else if( checksum == getChecksumOfPacket(packet) && seqNum == 0) {
 					toLayer5(packet.getPayload());
 					Packet pkt = new Packet(0, 0, 0);
+					pkt.setChecksum(getChecksumOfPacket(pkt));
 					toLayer3(1, pkt);
 					receiverState++;
 				}
 				break;
 			case 1:
 				// if corrupted or sequence number is 0
-				if ( checksum != checksumOfString(packet.getPayload()) || seqNum == 0) {
+				if ( checksum != getChecksumOfPacket(packet) || seqNum == 0) {
 					Packet pkt = new Packet(1, 0, 0);
+					pkt.setChecksum(getChecksumOfPacket(pkt));
 					toLayer3(1, pkt);
 				}
 				// if sequence number is 1
-				else if( checksum == checksumOfString(packet.getPayload()) && seqNum == 1){
+				else if( checksum == getChecksumOfPacket(packet) && seqNum == 1) {
 					toLayer5(packet.getPayload());
 					Packet pkt = new Packet(1, 1, 0);
+					pkt.setChecksum(getChecksumOfPacket(pkt));
 					toLayer3(1, pkt);
 					receiverState = 0;
 				}

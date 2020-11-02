@@ -6,7 +6,7 @@ public class Packet {
 	
 	private int seqnum;		
 	private int acknum;
-	private int checksum;
+	private long checksum;
 	private String payload;		
 
 	public Packet(Packet p) {
@@ -16,7 +16,7 @@ public class Packet {
 		payload = new String(p.getPayload());
 	}
 
-	public Packet(int seq, int ack, int check, String newPayload) {
+	public Packet(int seq, int ack, long check, String newPayload) {
 		seqnum = seq;
 		acknum = ack;
 		checksum = check;
@@ -29,7 +29,7 @@ public class Packet {
 		}
 	}
 
-	public Packet(int seq, int ack, int check) {
+	public Packet(int seq, int ack, long check) {
 		seqnum = seq;
 		acknum = ack;
 		checksum = check;
@@ -46,7 +46,7 @@ public class Packet {
 		return true;
 	}
 
-	public boolean setChecksum(int n) {
+	public boolean setChecksum(long n) {
 		checksum = n;
 		return true;
 	}
@@ -72,7 +72,7 @@ public class Packet {
 		return acknum;
 	}
 
-	public int getChecksum() {
+	public long getChecksum() {
 		return checksum;
 	}
 
