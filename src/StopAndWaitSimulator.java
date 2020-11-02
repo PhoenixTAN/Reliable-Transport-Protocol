@@ -1,6 +1,6 @@
 import java.util.*;
 import java.io.*;
-import utils.LoopQueue;
+import utils.SlidingWindowQueue;
 
 
 public class StopAndWaitSimulator extends NetworkSimulator {
@@ -101,7 +101,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	private int receiverState;
 	// 0: wait for 0 from below, 1: wait for 1 from below
 
-	private LoopQueue<Packet> senderBuffer;
+	private SlidingWindowQueue<Packet> senderBuffer;
 
 
 	// Also add any necessary methods (e.g. checksum of a String)
@@ -111,7 +111,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 			int winsize, double timeout) {
 		super(numMessages, loss, corrupt, avgDelay, trace, seed);
 		windowSize = winsize;
-		limitSeqNo = winsize;	// set appropriately; assumes Stop and Wait here!
+		limitSeqNo = winsize + 1;	// set appropriately; assumes Stop and Wait here!
 		retransmitInterval = timeout;
 	}
 
@@ -130,7 +130,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	protected void aInit() {
 		senderSequenceNumber = FirstSeqNo;
 		senderState = 0;
-		senderBuffer = new LoopQueue<Packet>(windowSize);
+		senderBuffer = new SlidingWindowQueue<Packet>(windowSize);
 	}
 
 	/**
@@ -140,14 +140,17 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * is delivered in-order, and correctly, to the receiving side upper layer.
 	 * */
 	protected void aOutput(Message message) {
-
+		System.out.println("Calling aOutput()...");
+		
 		switch(senderState) {
 			case 0:		// wait for call 0 from above
 			case 2:		// wait for call 1 from above
 				Packet packet = null;
 				// check the sender buffer first
-				if ( !senderBuffer.isEmpty() ) {
-					Packet pkt = senderBuffer.peak();	// get the message but not delete it
+				if ( !senderBuffer.isWindowEmpty() ) {
+					Packet pkt = senderBuffer.getFirst();	// get the message but not delete it
+					System.out.println("here: " + pkt);
+					System.out.println("Current sender buffer: " + senderBuffer);
 					packet = new Packet(pkt);
 				}
 				else {
@@ -177,6 +180,8 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 			default:
 				System.out.println("Unexpected sender state in aOutput().");
 		}
+		
+		System.out.println("Current sender buffer: " + senderBuffer);
 
 	}
 
@@ -187,11 +192,11 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * from the B-side.
 	 * */
 	protected void aInput(Packet packet) {
+		System.out.println("Calling aInput()...");
 		int ackNum = packet.getAcknum();
 
 		int checksum = packet.getChecksum();
 		
-
 		switch(senderState) {
 			case 1:
 				// sender is waiting for ACK 0
@@ -203,12 +208,16 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				if ( ackNum == 0 && checksum == checksumOfString(packet.getPayload()) ) {
 					stopTimer(0);
 					senderState++;
+					int baseNum = senderBuffer.getFirst().getSeqnum();
+					senderBuffer.slide(ackNum, baseNum);
 				}
 				break;
 			case 3:
 				if ( ackNum == 1 && checksum == checksumOfString(packet.getPayload()) ) {
 					stopTimer(0);
 					senderState = 0;	// wait for call 0 from above
+					int baseNum = senderBuffer.getFirst().getSeqnum();
+					senderBuffer.slide(ackNum, baseNum);
 				}
 				break;
 			default:
@@ -224,10 +233,11 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * See starttimer() and stoptimer() below for how the timer is started and stopped.
 	 * */
 	protected void aTimerInterrupt() {
+		System.out.println("Calling aTimerInterrupt()...");
 		switch(senderState) {
 			case 1:
 			case 3:
-				Packet packet = senderBuffer.peak();
+				Packet packet = senderBuffer.getFirst();
 				toLayer3(0, new Packet(packet));	// udt_send()
 				startTimer(0, retransmitInterval);
 				break;
@@ -237,7 +247,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	}
 
 
-	/*
+	/**
 	 * This routine will be called once,
 	 * before any of your other B-side routines are called.
 	 * It can be used to do any required initialization.
@@ -246,13 +256,15 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		receiverState = 0;
 	}
 
-	/*
+	/**
 	 * This routine will be called whenever a packet sent from the A-side
 	 * (i.e., as a result of a tolayer3()being done by an A-side procedure)
 	 * arrives at the B-side. packet is the (possibly corrupted) packet sent
 	 * from the A-side.
 	 * */
 	protected void bInput(Packet packet) {
+		
+		System.out.println("Calling bInput()...");
 		int seqNum = packet.getSeqnum();
 		int checksum = packet.getChecksum();
 		
@@ -289,7 +301,6 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				System.out.println("Unexpected sender state in bInput()");
 				
 		}
-		
 	}
 
 

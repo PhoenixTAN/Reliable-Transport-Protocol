@@ -1,4 +1,4 @@
-import utils.LoopQueue;
+import utils.SlidingWindowQueue;
 
 import java.util.*;
 import java.io.*;
@@ -107,8 +107,8 @@ public class GoBackNSimulator extends NetworkSimulator {
     private int senderState;
     private int receiverState;
 
-    private LoopQueue<Packet> senderBuffer;
-    private LoopQueue<Packet> receiverBuffer;
+    private SlidingWindowQueue<Packet> senderBuffer;
+    private SlidingWindowQueue<Packet> receiverBuffer;
 
     /**
      * Also add any necessary methods (e.g. checksum of a String)
@@ -169,7 +169,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         senderSeqNumBegin = FirstSeqNo;
         senderSeqNumEnd = senderSeqNumBegin + WindowSize - 1;
         senderState = 0;
-        senderBuffer = new LoopQueue<Packet>(WindowSize);
+        senderBuffer = new SlidingWindowQueue<Packet>(WindowSize);
     }
 
 
@@ -194,7 +194,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         receiverSeqNumBegin = FirstSeqNo;
         receiverSeqNumEnd = receiverSeqNumBegin + WindowSize - 1;
         receiverState = 0;
-        receiverBuffer = new LoopQueue<Packet>(WindowSize);
+        receiverBuffer = new SlidingWindowQueue<Packet>(WindowSize);
     }
 
     // Use to print final statistics
