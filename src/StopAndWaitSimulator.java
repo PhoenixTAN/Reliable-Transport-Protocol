@@ -2,8 +2,11 @@ import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import utils.SlidingWindowQueue;
+import utils.StopAndWaitQueue;
 
-
+/**
+ * Author: Ziqi Tan, Xueyan Xia
+ * */
 public class StopAndWaitSimulator extends NetworkSimulator {
 	/**
 	 * Predefined Constants (static member variables):
@@ -85,38 +88,38 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * window size double RxmtInterval : the retransmission timeout int LimitSeqNo :
 	 * when sequence number reaches this value, it wraps around
 	 */
-
 	public static final int FirstSeqNo = 0;
 	private int windowSize;
 	private double retransmitInterval;
 	private int limitSeqNo;
 
-	// Add any necessary class variables here. Remember, you cannot use
-	// these variables to send messages error free!
-	// They can only hold state information for A or B.
+	
+	/**
+	 * Add any necessary class variables here. Remember, you cannot use
+	 * these variables to send messages error free!
+	 * They can only hold state information for A or B.
+	 * */
 	private int senderSequenceNumber;
+	
+	/**
+	 * 0: wait for call 0 from above, 1: wait for ACK 0
+	 * 2: wait for call 1 from above, 3: wait for ACK 1
+	 * */
 	private int senderState;
-	// 0: wait for call 0 from above, 1: wait for ACK 0
-	// 2: wait for call 1 from above, 3: wait for ACK 1
 
+	/** 0: wait for 0 from below, 1: wait for 1 from below */
 	private int receiverState;
-	// 0: wait for 0 from below, 1: wait for 1 from below
-
+	
 	private SlidingWindowQueue<Packet> senderBuffer;
+	
+	/** custom statistics */
+	private int retransmissionsByA;
 
-
-	// Also add any necessary methods (e.g. checksum of a String)
-
-	// This is the constructor. Don't touch!
-	public StopAndWaitSimulator(int numMessages, double loss, double corrupt, double avgDelay, int trace, int seed,
-			int winsize, double timeout) {
-		super(numMessages, loss, corrupt, avgDelay, trace, seed);
-		windowSize = winsize;
-		limitSeqNo = winsize + 1;	// set appropriately; assumes Stop and Wait here!
-		retransmitInterval = timeout;
-	}
-
-
+	/** Also add any necessary methods (e.g. checksum of a String) */ 
+	
+	/**
+	 * get checksum of a packet by java.util.zip Checksum and CRC32
+	 * */
 	private long getChecksumOfPacket(Packet packet) {
 		
 		String text = packet.getSeqnum() + packet.getAcknum() + packet.getPayload();
@@ -128,6 +131,21 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		return crc32.getValue();
 	}
 
+	// This is the constructor. Don't touch!
+	public StopAndWaitSimulator(int numMessages, double loss, double corrupt, double avgDelay, int trace, int seed,
+			int winsize, double timeout) {
+		
+		super(numMessages, loss, corrupt, avgDelay, trace, seed);
+		
+		windowSize = winsize;
+		limitSeqNo = winsize + 1;	// set appropriately; assumes Stop and Wait here!
+		retransmitInterval = timeout;
+		
+		/** initialize custom statistics */
+		retransmissionsByA = 0;
+	}
+
+
 	/**
 	 * This routine will be called once, before any of your other A-side
 	 * routines are called. It can be used to do any required initialization
@@ -136,7 +154,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	protected void aInit() {
 		senderSequenceNumber = FirstSeqNo;
 		senderState = 0;
-		senderBuffer = new SlidingWindowQueue<Packet>(windowSize);
+		senderBuffer = new StopAndWaitQueue<Packet>(windowSize);
 	}
 
 	/**
@@ -146,7 +164,9 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * is delivered in-order, and correctly, to the receiving side upper layer.
 	 * */
 	protected void aOutput(Message message) {
-		System.out.println("Calling aOutput()...");
+		if ( traceLevel > 0 ) {
+			System.out.println("Calling aOutput()...");
+		}
 		
 		switch(senderState) {
 			case 0:		// wait for call 0 from above
@@ -154,8 +174,10 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				Packet packet = null;
 				// check the sender buffer first
 				if ( !senderBuffer.isWindowEmpty() ) {
-					Packet pkt = senderBuffer.getFirst();	// get the message but not delete it
-					// System.out.println("here: " + pkt);
+					
+					// get the message but not delete it
+					Packet pkt = senderBuffer.getFirst();	
+					
 					// System.out.println("Current sender buffer: " + senderBuffer);
 					packet = new Packet(pkt);
 				}
@@ -165,7 +187,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 					packet.setChecksum(checksum);
 				}
 
-				// then buffer the new message if the buffer is not full
+				// then buffer the new message
 				senderBuffer.add(new Packet(packet));
 
 				toLayer3(0, packet);	// udt_send(packet)
@@ -176,7 +198,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 
 				// update sender state
 				senderState++;	// state 0 -> state 1 and state 2 -> state 3
-				System.out.println("sender state becomes: " + senderState);
+				
 				break;
 
 			case 1:		// wait for ACK 0
@@ -189,8 +211,6 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 			default:
 				System.out.println("Unexpected sender state in aOutput().");
 		}
-		
-		// System.out.println("Current sender buffer: " + senderBuffer);
 
 	}
 
@@ -201,9 +221,11 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	 * from the B-side.
 	 * */
 	protected void aInput(Packet packet) {
-		System.out.println("Calling aInput()...");
+		if ( traceLevel > 0 ) {
+			System.out.println("Calling aInput()...");
+		}
+		
 		int ackNum = packet.getAcknum();
-
 		long checksum = packet.getChecksum();
 		
 		switch(senderState) {
@@ -233,8 +255,10 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				break;
 			case 0:
 			case 2:
-				// System.out.println("current sender state: " + senderState);
-				// System.out.println("When waiting for call from above, receive packet from layer 3. Do nothing.");
+				if ( traceLevel > 0 ) {
+					System.out.println("current sender state: " + senderState);
+					System.out.println("When waiting for call from above, receive packet from layer 3. Do nothing.");
+				}
 				break;
 			default:
 				System.out.println("WARNING!! Unexpected sender state: " + senderState +  " in aInput().");
@@ -243,18 +267,22 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 
 	}
 
-	/*
+	/**
 	 * This routine will be called when A's timer expires (thus generating a timer interrupt).
 	 * You'll probably want to use this routine to control the retransmission of packets.
 	 * See starttimer() and stoptimer() below for how the timer is started and stopped.
 	 * */
 	protected void aTimerInterrupt() {
-		System.out.println("Calling aTimerInterrupt()...");
+		if ( traceLevel > 0 ) {
+			System.out.println("Calling aTimerInterrupt()...");
+		}
+		
 		switch(senderState) {
 			case 1:
 			case 3:
 				Packet packet = senderBuffer.getFirst();
 				toLayer3(0, new Packet(packet));	// udt_send()
+				retransmissionsByA++;	// statistics
 				startTimer(0, retransmitInterval);
 				break;
 			default:
@@ -273,6 +301,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	}
 
 	/**
+	 * Author: Xueyan Xia
 	 * This routine will be called whenever a packet sent from the A-side
 	 * (i.e., as a result of a tolayer3()being done by an A-side procedure)
 	 * arrives at the B-side. packet is the (possibly corrupted) packet sent
@@ -288,7 +317,6 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 			case 0:
 				// if corrupted or sequence number is 1
 				if ( checksum != getChecksumOfPacket(packet) || seqNum == 1) {
-					
 					Packet pkt = new Packet(0, 1, 0);
 					pkt.setChecksum(getChecksumOfPacket(pkt));
 					toLayer3(1, pkt);
@@ -325,25 +353,46 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	}
 
 
-
-	// Use to print final statistics
+	/** Use to print final statistics */
 	protected void Simulation_done() {
-		// TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES. DO
-		// NOT CHANGE THE FORMAT OF PRINTED OUTPUT
-		System.out.println("\n\n===============STATISTICS=======================");
-		System.out.println("Number of original packets transmitted by A:" + "<YourVariableHere>");
-		System.out.println("Number of retransmissions by A:" + "<YourVariableHere>");
-		System.out.println("Number of data packets delivered to layer 5 at B:" + "<YourVariableHere>");
-		System.out.println("Number of ACK packets sent by B:" + "<YourVariableHere>");
-		System.out.println("Number of corrupted packets:" + "<YourVariableHere>");
-		System.out.println("Ratio of lost packets:" + "<YourVariableHere>");
-		System.out.println("Ratio of corrupted packets:" + "<YourVariableHere>");
-		System.out.println("Average RTT:" + "<YourVariableHere>");
-		System.out.println("Average communication time:" + "<YourVariableHere>");
+		
+		String lineBreaker = System.lineSeparator();
+		int packetsTransmittedByA = getPacketsTransmittedByA();
+		int nToLayer5 = getNtoLayer5();
+		int ACKSentByB = getACKSentByB();
+		
+		/** total packet loss including ACK, retransmission packet and original packets */
+		int nLost = getNLost();
+		int nCorrupt = getNCorrupt();
+		
+		/** ratio of lost packets 
+		 * Lost ratio = 
+		 * 			(retransmissions by A ¨C corrupted packets) / 
+		 * 			((original packets by A + retransmissions by A) + ACK packets by B)
+		 * */
+		
+		
+		/**
+		 * TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES. 
+		 * DO NOT CHANGE THE FORMAT OF PRINTED OUTPUT
+		 * */
+		System.out.println(lineBreaker);
+		System.out.println("===============STATISTICS=======================");
+		System.out.println("Number of original packets transmitted by A: " + packetsTransmittedByA);
+		System.out.println("Number of retransmissions by A: " + retransmissionsByA);
+		System.out.println("Number of data packets delivered to layer 5 at B: " + nToLayer5);
+		System.out.println("Number of ACK packets sent by B: " + ACKSentByB);
+		System.out.println("Number of lost packets: " + nLost);
+		System.out.println("Number of corrupted packets: " + nCorrupt);
+		System.out.println("Ratio of lost packets: " + "");
+		System.out.println("Ratio of corrupted packets: " + "");
+		System.out.println("Average RTT: " + "<YourVariableHere>");
+		System.out.println("Average communication time: " + "<YourVariableHere>");
 		System.out.println("==================================================");
 
 		// PRINT YOUR OWN STATISTIC HERE TO CHECK THE CORRECTNESS OF YOUR PROGRAM
-		System.out.println("\nEXTRA:");
+		System.out.println(lineBreaker + "EXTRA:");
+		System.out.println("Custom statistics");
 		// EXAMPLE GIVEN BELOW
 		// System.out.println("Example statistic you want to check e.g. number of ACK
 		// packets received by A :" + "<YourVariableHere>");

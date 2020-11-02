@@ -1,92 +1,17 @@
 package utils;
 
-import java.util.ArrayList;
-
-
 /**
  * Author: Ziqi Tan
- * Description:
- * 		The buffer can receive messages from layer 5. 
- * 		Even though the window size is full, 
- * 		we still buffer the messages from layer 5.
- * 
- * */
-public class SlidingWindowQueue<T> {
-	
-	protected ArrayList<T> buffer;
+ */
 
-	protected int tail;
-	protected int windowSize;
+public interface SlidingWindowQueue<T> {
 	
-	/**
-	 * @param _bufferSize should be the maximum sequence number
-	 * */
-	public SlidingWindowQueue(int _windowSize) {
-		windowSize = _windowSize;
-		buffer = new ArrayList<T>(_windowSize);
-		tail = 0;
-	}
+	public T getDatabyIndex(int seqNum);
+	public boolean isWindowFull();
+	public boolean isWindowEmpty();
+	public void add(T t);
+	public T getFirst();
+	public boolean removeFirst();
+	public void slide(int ackNum, int baseNum);
 	
-	
-	public T getDatabyIndex(int seqNum) {
-		return buffer.get(seqNum);
-	}
-	
-	
-	public boolean isWindowFull() {
-		if ( tail % windowSize == 0 ) {
-			return true;
-		}
-		return false;
-	}
-	
-	
-	public boolean isWindowEmpty() {
-		if ( tail == 0 ) {
-			return true;
-		}
-		return false;
-	}
-	
-	
-	public void add(T t) {
-		buffer.add(t);
-		tail++;
-	}
-	
-	
-	public T getFirst() {
-		if ( buffer.size() < 1 ) {
-			return null;
-		}
-		return buffer.get(0);
-	}
-	
-	
-	public boolean removeFirst() {
-		if ( buffer.size() < 1 ) {
-			return false;
-		}
-		buffer.remove(0);
-		return true;
-	}
-	
-	
-	public void slide(int ackNum, int baseNum) {
-		while ( baseNum <= ackNum ) {
-			removeFirst();
-			baseNum++;
-			// update tail
-			tail = Math.min(windowSize - 1, buffer.size());
-		}	
-	}
-	
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		for ( int i = 0; i < tail; i++ ) {
-			sb.append(buffer.get(i));
-		}
-		return sb.toString() + " tail: " + tail;
-	}
-
 }

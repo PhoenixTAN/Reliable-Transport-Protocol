@@ -6,7 +6,7 @@ public class Packet {
 	
 	private int seqnum;		
 	private int acknum;
-	private long checksum;
+	private long checksum;		/** modified by Ziqi Tan */
 	private String payload;		
 
 	public Packet(Packet p) {

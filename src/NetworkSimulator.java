@@ -1,5 +1,3 @@
-import java.util.Vector;
-import java.util.Enumeration;
 import java.io.*;
 
 
@@ -8,7 +6,6 @@ public abstract class NetworkSimulator {
 	 * This constant controls the maximum size of the buffer in a Message
 	 * and in a Packet
 	 */
-
 	public static final int MAXDATASIZE = 20;
 
 	/**
@@ -23,7 +20,10 @@ public abstract class NetworkSimulator {
 	 */
 	public static final int A = 0;
 	public static final int B = 1;
-
+	
+	/**
+	 * parameters you will input manually
+	 * */
 	private int maxMessages;
 	private double lossProb;
 	private double corruptProb;
@@ -35,18 +35,30 @@ public abstract class NetworkSimulator {
 	 *  A tracing value greater than 2 will display all sorts of odd messages that were used for emulator-debugging purposes
 	 */
 	protected int traceLevel;
-
+	
+	/** Event list for all events */
 	private EventList eventList;
+	
+	/** file to write the data deliver from A to the layer 5 of B */
 	private FileWriter outFile;
 
+	/** random number generator */
 	private OSIRandom rand;
-
+	
 	private int numOfMessages;
+	private double time;
+	
+	/** statistics */
 	private int nToLayer3;
 	private int nLost;
 	private int nCorrupt;
-	private double time;
-
+	
+	/** custom statistics */
+	private int nToLayer5;
+	private int packetsTransmittedByA;
+	private int ACKSentByB;
+	
+	
 	protected abstract void aOutput(Message message);
 
 	protected abstract void aInput(Packet packet);
@@ -61,27 +73,39 @@ public abstract class NetworkSimulator {
 
 	protected abstract void Simulation_done();
 
+	
 	public NetworkSimulator(int numMessages, double loss, double corrupt, double avgDelay, int trace, int seed) {
+		
 		maxMessages = numMessages;
 		lossProb = loss;
 		corruptProb = corrupt;
 		avgMessageDelay = avgDelay;
 		traceLevel = trace;
+		
 		eventList = new EventListImpl();
 		rand = new OSIRandom(seed);
+		
+		time = 0;
+		numOfMessages = 0;
+		
 		try {
 			outFile = new FileWriter("OutputFile");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		numOfMessages = 0;
 		nToLayer3 = 0;
 		nLost = 0;
 		nCorrupt = 0;
-		time = 0;
+		
+		nToLayer5 = 0;
+		packetsTransmittedByA = 0;
+		ACKSentByB = 0;
 	}
 
+	/**
+	 * This method will be ran by the simulator
+	 * */
 	public void runNumOfMessageSimulator() {
 		Event next;
 
@@ -113,51 +137,52 @@ public abstract class NetworkSimulator {
 
 			// Perform the appropriate action based on the event
 			switch (next.getType()) {
-			case TIMERINTERRUPT:
-				if (next.getEntity() == A) {
-					aTimerInterrupt();
-				} else {
-					System.out.println("INTERNAL PANIC: Timeout for " + "invalid entity");
-				}
-				break;
-
-			case FROMLAYER3:
-				if (next.getEntity() == A) {
-					aInput(next.getPacket());
-				} else if (next.getEntity() == B) {
-					bInput(next.getPacket());
-				} else {
-					System.out.println("INTERNAL PANIC: Packet has " + "arrived for unknown entity");
-				}
-				break;
-
-			case FROMLAYER5:
-
-				// If a message has arrived from layer 5, we need to
-				// schedule the arrival of the next message
-				generateNextArrival();
-
-				char[] nextMessage = new char[MAXDATASIZE];
-
-				// Now, let's generate the contents of this message
-				char j = (char) ((numOfMessages % 26) + 97);
-				for (int i = 0; i < MAXDATASIZE; i++) {
-					nextMessage[i] = j;
-				}
-
-				// Increment the message counter
-				numOfMessages++;
-
-				// If we've reached the maximum message count, exit the main loop
-				if (numOfMessages == maxMessages + 1)
+			
+				case TIMERINTERRUPT:
+					if (next.getEntity() == A) {
+						aTimerInterrupt();
+					} else {
+						System.out.println("INTERNAL PANIC: Timeout for " + "invalid entity");
+					}
 					break;
-
-				// Let the student handle the new message
-				aOutput(new Message(new String(nextMessage)));
-				break;
-
-			default:
-				System.out.println("INTERNAL PANIC: Unknown event type");
+	
+				case FROMLAYER3:
+					if (next.getEntity() == A) {
+						aInput(next.getPacket());
+					} else if (next.getEntity() == B) {
+						bInput(next.getPacket());
+					} else {
+						System.out.println("INTERNAL PANIC: Packet has " + "arrived for unknown entity");
+					}
+					break;
+	
+				case FROMLAYER5:
+	
+					// If a message has arrived from layer 5, we need to
+					// schedule the arrival of the next message
+					generateNextArrival();
+	
+					char[] nextMessage = new char[MAXDATASIZE];
+	
+					// Now, let's generate the contents of this message
+					char j = (char) ((numOfMessages % 26) + 97);
+					for (int i = 0; i < MAXDATASIZE; i++) {
+						nextMessage[i] = j;
+					}
+	
+					// Increment the message counter
+					numOfMessages++;
+	
+					// If we've reached the maximum message count, exit the main loop
+					if (numOfMessages == maxMessages + 1)
+						break;
+	
+					// Let the student handle the new message
+					aOutput(new Message(new String(nextMessage)));
+					break;
+	
+				default:
+					System.out.println("INTERNAL PANIC: Unknown event type");
 			}
 			if (numOfMessages == maxMessages + 1)
 				break;
@@ -260,8 +285,10 @@ public abstract class NetworkSimulator {
 
 		// Set our destination
 		if (callingEntity == A) {
+			packetsTransmittedByA++;
 			destination = B;
 		} else if (callingEntity == B) {
+			ACKSentByB++;
 			destination = A;
 		} else {
 			System.out.println("toLayer3: Warning: invalid packet sender");
@@ -324,13 +351,14 @@ public abstract class NetworkSimulator {
 		eventList.add(arrival);
 	}
 	
-	/*
+	/**
 	 * message is a structure of type msg to be passed up to layer 5 of the B-side. 
 	 * Note that we simplified the interface here 
 	 * so you don't need to explicitly specify calling_entity (A-side or B-side) 
 	 * since we are only dealing with unidirectional data delivery to the B-side.
 	 * */
 	protected void toLayer5(String dataSent) {
+		nToLayer5++;
 		try {
 			outFile.write(dataSent, 0, MAXDATASIZE);
 			outFile.write('\n');
@@ -345,6 +373,32 @@ public abstract class NetworkSimulator {
 
 	protected void printEventList() {
 		System.out.println(eventList.toString());
+	}
+	
+	/** getters for statistics */
+	protected int getNtoLayer3() {
+		return nToLayer3;
+	}
+
+	protected int getNLost() {
+		return nLost;
+	}
+	
+	protected int getNCorrupt() {
+		return nCorrupt;
+	}
+	
+	/** getters for custom statistics */
+	protected int getNtoLayer5() {
+		return nToLayer5;
+	}
+	
+	protected int getPacketsTransmittedByA() {
+		return packetsTransmittedByA;
+	}
+	
+	protected int getACKSentByB() {
+		return ACKSentByB;
 	}
 
 }

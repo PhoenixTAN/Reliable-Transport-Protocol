@@ -1,8 +1,9 @@
-import utils.SlidingWindowQueue;
+import utils.StopAndWaitQueue;
 
-import java.util.*;
-import java.io.*;
 
+/**
+ * Author: Xueyan Xia
+ * */
 public class GoBackNSimulator extends NetworkSimulator {
     /**
      * Predefined Constants (static member variables):
@@ -107,8 +108,8 @@ public class GoBackNSimulator extends NetworkSimulator {
     private int senderState;
     private int receiverState;
 
-    private SlidingWindowQueue<Packet> senderBuffer;
-    private SlidingWindowQueue<Packet> receiverBuffer;
+    private StopAndWaitQueue<Packet> senderBuffer;
+    private StopAndWaitQueue<Packet> receiverBuffer;
 
     /**
      * Also add any necessary methods (e.g. checksum of a String)
@@ -169,7 +170,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         senderSeqNumBegin = FirstSeqNo;
         senderSeqNumEnd = senderSeqNumBegin + WindowSize - 1;
         senderState = 0;
-        senderBuffer = new SlidingWindowQueue<Packet>(WindowSize);
+        senderBuffer = new StopAndWaitQueue<Packet>(WindowSize);
     }
 
 
@@ -194,7 +195,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         receiverSeqNumBegin = FirstSeqNo;
         receiverSeqNumEnd = receiverSeqNumBegin + WindowSize - 1;
         receiverState = 0;
-        receiverBuffer = new SlidingWindowQueue<Packet>(WindowSize);
+        receiverBuffer = new StopAndWaitQueue<Packet>(WindowSize);
     }
 
     // Use to print final statistics
