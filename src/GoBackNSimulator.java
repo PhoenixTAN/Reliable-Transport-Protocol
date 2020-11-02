@@ -1,4 +1,4 @@
-import utils.StopAndWaitQueue;
+import utils.GoBackNQueue;
 
 
 /**
@@ -108,8 +108,9 @@ public class GoBackNSimulator extends NetworkSimulator {
     private int senderState;
     private int receiverState;
 
-    private StopAndWaitQueue<Packet> senderBuffer;
-    private StopAndWaitQueue<Packet> receiverBuffer;
+
+    private GoBackNQueue<Packet> senderQueue;
+    private GoBackNQueue<Packet> receiverQueue;
 
     /**
      * Also add any necessary methods (e.g. checksum of a String)
@@ -170,7 +171,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         senderSeqNumBegin = FirstSeqNo;
         senderSeqNumEnd = senderSeqNumBegin + WindowSize - 1;
         senderState = 0;
-        senderBuffer = new StopAndWaitQueue<Packet>(WindowSize);
+        senderQueue = new GoBackNQueue<Packet>(WindowSize);
     }
 
 
@@ -195,7 +196,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         receiverSeqNumBegin = FirstSeqNo;
         receiverSeqNumEnd = receiverSeqNumBegin + WindowSize - 1;
         receiverState = 0;
-        receiverBuffer = new StopAndWaitQueue<Packet>(WindowSize);
+        receiverQueue = new GoBackNQueue<Packet>(WindowSize);
     }
 
     // Use to print final statistics
