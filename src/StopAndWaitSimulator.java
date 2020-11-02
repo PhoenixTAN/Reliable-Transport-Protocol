@@ -155,8 +155,8 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				// check the sender buffer first
 				if ( !senderBuffer.isWindowEmpty() ) {
 					Packet pkt = senderBuffer.getFirst();	// get the message but not delete it
-					System.out.println("here: " + pkt);
-					System.out.println("Current sender buffer: " + senderBuffer);
+					// System.out.println("here: " + pkt);
+					// System.out.println("Current sender buffer: " + senderBuffer);
 					packet = new Packet(pkt);
 				}
 				else {
@@ -176,6 +176,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 
 				// update sender state
 				senderState++;	// state 0 -> state 1 and state 2 -> state 3
+				System.out.println("sender state becomes: " + senderState);
 				break;
 
 			case 1:		// wait for ACK 0
@@ -189,7 +190,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				System.out.println("Unexpected sender state in aOutput().");
 		}
 		
-		System.out.println("Current sender buffer: " + senderBuffer);
+		// System.out.println("Current sender buffer: " + senderBuffer);
 
 	}
 
@@ -216,6 +217,7 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				if ( ackNum == 0 && checksum == getChecksumOfPacket(packet) ) {
 					stopTimer(0);
 					senderState++;
+					// System.out.println("sender state becomes: " + senderState);
 					int baseNum = senderBuffer.getFirst().getSeqnum();
 					senderBuffer.slide(ackNum, baseNum);
 				}
@@ -224,12 +226,18 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 				if ( ackNum == 1 && checksum == getChecksumOfPacket(packet) ) {
 					stopTimer(0);
 					senderState = 0;	// wait for call 0 from above
+					// System.out.println("sender state becomes: " + senderState);
 					int baseNum = senderBuffer.getFirst().getSeqnum();
 					senderBuffer.slide(ackNum, baseNum);
 				}
 				break;
+			case 0:
+			case 2:
+				// System.out.println("current sender state: " + senderState);
+				// System.out.println("When waiting for call from above, receive packet from layer 3. Do nothing.");
+				break;
 			default:
-				System.out.println("Unexpected sender state in aInput().");
+				System.out.println("WARNING!! Unexpected sender state: " + senderState +  " in aInput().");
 				
 		}
 
