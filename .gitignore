@@ -3,3 +3,5 @@
 .classpath
 /.idea/
 Reliable-Transport-Protocol.iml
+/out/
+OutputFile

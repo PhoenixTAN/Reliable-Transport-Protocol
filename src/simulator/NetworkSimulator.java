@@ -381,6 +381,10 @@ public abstract class NetworkSimulator {
 	}
 	
 	/** getters for statistics */
+	protected int getMaxMessages() {
+		return maxMessages;
+	}
+	
 	protected int getNtoLayer3() {
 		return nToLayer3;
 	}

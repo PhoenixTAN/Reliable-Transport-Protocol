@@ -361,7 +361,8 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 	protected void Simulation_done() {
 		
 		String lineBreaker = System.lineSeparator();
-		int packetsTransmittedByA = getPacketsTransmittedByA();
+		int originPacketsTransmittedByA = getMaxMessages();
+		int totalPacketsTransmittedByA = getPacketsTransmittedByA();
 		int nToLayer5 = getNtoLayer5();
 		int ACKSentByB = getACKSentByB();
 		
@@ -370,11 +371,22 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		int nCorrupt = getNCorrupt();
 		
 		/** ratio of lost packets 
-		 * Lost ratio = 
-		 * 			(retransmissions by A ¨C corrupted packets) / 
-		 * 			((original packets by A + retransmissions by A) + ACK packets by B)
 		 * */
+		double lostRatio = (retransmissionsByA - nCorrupt) / 
+				(double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
+		lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
 		
+		/**
+		 * Ratio of corrupted packets:
+		 * Corruption ratio = 
+		 * 			(corrupted packets) / 
+		 * 			( (original packets by A + retransmissions by A) + ACK packets by B - 
+		 * 			(retransmissions by A ¨C corrupted packets) )
+		 * */
+		double corruptedRatio = nCorrupt / 
+				(double)((totalPacketsTransmittedByA + retransmissionsByA) 
+						+ ACKSentByB - (retransmissionsByA - nCorrupt));
+		corruptedRatio = Math.round(corruptedRatio * 100 * 100) * 0.01;
 		
 		/**
 		 * TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES. 
@@ -382,14 +394,13 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		 * */
 		System.out.println(lineBreaker);
 		System.out.println("===============STATISTICS=======================");
-		System.out.println("Number of original packets transmitted by A: " + packetsTransmittedByA);
+		System.out.println("Number of original packets transmitted by A: " + originPacketsTransmittedByA);
 		System.out.println("Number of retransmissions by A: " + retransmissionsByA);
 		System.out.println("Number of data packets delivered to layer 5 at B: " + nToLayer5);
 		System.out.println("Number of ACK packets sent by B: " + ACKSentByB);
-		System.out.println("Number of lost packets: " + nLost);
 		System.out.println("Number of corrupted packets: " + nCorrupt);
-		System.out.println("Ratio of lost packets: " + "");
-		System.out.println("Ratio of corrupted packets: " + "");
+		System.out.println("Ratio of lost packets: " + String.format("%.2f", lostRatio) + "%");
+		System.out.println("Ratio of corrupted packets: " + String.format("%.2f", corruptedRatio) + "%");
 		System.out.println("Average RTT: " + "<YourVariableHere>");
 		System.out.println("Average communication time: " + "<YourVariableHere>");
 		System.out.println("==================================================");
@@ -397,6 +408,8 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		// PRINT YOUR OWN STATISTIC HERE TO CHECK THE CORRECTNESS OF YOUR PROGRAM
 		System.out.println(lineBreaker + "EXTRA:");
 		System.out.println("Custom statistics");
+		System.out.println("Total packets transmitted by A: " + totalPacketsTransmittedByA);
+		System.out.println("Number of lost packets: " + nLost);
 		// EXAMPLE GIVEN BELOW
 		// System.out.println("Example statistic you want to check e.g. number of ACK
 		// packets received by A :" + "<YourVariableHere>");
