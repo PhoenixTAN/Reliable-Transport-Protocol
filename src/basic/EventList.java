@@ -1,3 +1,7 @@
+package basic;
+
+import basic.Event;
+
 public interface EventList {
 	public boolean add(Event e);
 

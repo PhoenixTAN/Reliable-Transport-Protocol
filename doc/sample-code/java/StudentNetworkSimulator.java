@@ -6,8 +6,8 @@ public class StudentNetworkSimulator extends NetworkSimulator
     /*
      * Predefined Constants (static member variables):
      *
-     *   int MAXDATASIZE : the maximum size of the Message data and
-     *                     Packet payload
+     *   int MAXDATASIZE : the maximum size of the basic.Message data and
+     *                     basic.Packet payload
      *
      *   int A           : a predefined integer that represents entity A
      *   int B           : a predefined integer that represents entity B 
@@ -20,7 +20,7 @@ public class StudentNetworkSimulator extends NetworkSimulator
      *       Starts a timer running at "entity" [A or B], which will expire in
      *       "increment" time units, causing the interrupt handler to be
      *       called.  You should only call this with A.
-     *  void toLayer3(int callingEntity, Packet p)
+     *  void toLayer3(int callingEntity, basic.Packet p)
      *       Puts the packet "p" into the network from "callingEntity" [A or B]
      *  void toLayer5(String dataSent)
      *       Passes "dataSent" up to layer 5
@@ -36,49 +36,49 @@ public class StudentNetworkSimulator extends NetworkSimulator
      *
      *  Predefined Classes:
      *
-     *  Message: Used to encapsulate a message coming from layer 5
+     *  basic.Message: Used to encapsulate a message coming from layer 5
      *    Constructor:
-     *      Message(String inputData): 
-     *          creates a new Message containing "inputData"
+     *      basic.Message(String inputData):
+     *          creates a new basic.Message containing "inputData"
      *    Methods:
      *      boolean setData(String inputData):
-     *          sets an existing Message's data to "inputData"
+     *          sets an existing basic.Message's data to "inputData"
      *          returns true on success, false otherwise
      *      String getData():
      *          returns the data contained in the message
-     *  Packet: Used to encapsulate a packet
+     *  basic.Packet: Used to encapsulate a packet
      *    Constructors:
-     *      Packet (Packet p):
-     *          creates a new Packet that is a copy of "p"
-     *      Packet (int seq, int ack, int check, String newPayload)
-     *          creates a new Packet with a sequence field of "seq", an
+     *      basic.Packet (basic.Packet p):
+     *          creates a new basic.Packet that is a copy of "p"
+     *      basic.Packet (int seq, int ack, int check, String newPayload)
+     *          creates a new basic.Packet with a sequence field of "seq", an
      *          ack field of "ack", a checksum field of "check", and a
      *          payload of "newPayload"
-     *      Packet (int seq, int ack, int check)
-     *          chreate a new Packet with a sequence field of "seq", an
+     *      basic.Packet (int seq, int ack, int check)
+     *          chreate a new basic.Packet with a sequence field of "seq", an
      *          ack field of "ack", a checksum field of "check", and
      *          an empty payload
      *    Methods:
      *      boolean setSeqnum(int n)
-     *          sets the Packet's sequence field to "n"
+     *          sets the basic.Packet's sequence field to "n"
      *          returns true on success, false otherwise
      *      boolean setAcknum(int n)
-     *          sets the Packet's ack field to "n"
+     *          sets the basic.Packet's ack field to "n"
      *          returns true on success, false otherwise
      *      boolean setChecksum(int n)
-     *          sets the Packet's checksum to "n"
+     *          sets the basic.Packet's checksum to "n"
      *          returns true on success, false otherwise
      *      boolean setPayload(String newPayload)
-     *          sets the Packet's payload to "newPayload"
+     *          sets the basic.Packet's payload to "newPayload"
      *          returns true on success, false otherwise
      *      int getSeqnum()
-     *          returns the contents of the Packet's sequence field
+     *          returns the contents of the basic.Packet's sequence field
      *      int getAcknum()
-     *          returns the contents of the Packet's ack field
+     *          returns the contents of the basic.Packet's ack field
      *      int getChecksum()
-     *          returns the checksum of the Packet
+     *          returns the checksum of the basic.Packet
      *      int getPayload()
-     *          returns the Packet's payload
+     *          returns the basic.Packet's payload
      *
      */
 

@@ -1,3 +1,7 @@
+package basic;
+
+import simulator.NetworkSimulator;
+
 /**
  * @author CS-655
  * @description The unit of data passed between the upper layers and your protocols.

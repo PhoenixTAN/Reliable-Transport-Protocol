@@ -1,3 +1,7 @@
+package basic;
+
+import simulator.NetworkSimulator;
+
 public class Event {
 	
 	private double time;

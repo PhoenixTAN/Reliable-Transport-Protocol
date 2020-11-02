@@ -1,10 +1,14 @@
+package basic;
+
+import simulator.NetworkSimulator;
+
 /**
  * @author CS-655
  * @description The unit of data passed between your routines and the network layer
  */
 public class Packet {
 	
-	private int seqnum;		
+	private int seqnum;
 	private int acknum;
 	private long checksum;		/** modified by Ziqi Tan */
 	private String payload;		

@@ -1,10 +1,15 @@
+package simulator;
+
+import basic.*;
+import utils.OSIRandom;
+
 import java.io.*;
 
 
 public abstract class NetworkSimulator {
 	/**
-	 * This constant controls the maximum size of the buffer in a Message
-	 * and in a Packet
+	 * This constant controls the maximum size of the buffer in a basic.Message
+	 * and in a basic.Packet
 	 */
 	public static final int MAXDATASIZE = 20;
 
@@ -36,7 +41,7 @@ public abstract class NetworkSimulator {
 	 */
 	protected int traceLevel;
 	
-	/** Event list for all events */
+	/** basic.Event list for all events */
 	private EventList eventList;
 	
 	/** file to write the data deliver from A to the layer 5 of B */
@@ -152,7 +157,7 @@ public abstract class NetworkSimulator {
 					} else if (next.getEntity() == B) {
 						bInput(next.getPacket());
 					} else {
-						System.out.println("INTERNAL PANIC: Packet has " + "arrived for unknown entity");
+						System.out.println("INTERNAL PANIC: basic.Packet has " + "arrived for unknown entity");
 					}
 					break;
 	

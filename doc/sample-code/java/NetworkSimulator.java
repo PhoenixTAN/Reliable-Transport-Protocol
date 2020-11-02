@@ -4,8 +4,8 @@ import java.io.*;
 
 public abstract class NetworkSimulator
 {
-    // This constant controls the maximum size of the buffer in a Message
-    // and in a Packet
+    // This constant controls the maximum size of the buffer in a basic.Message
+    // and in a basic.Packet
     public static final int MAXDATASIZE = 20;
     
     // These constants are possible events
@@ -127,7 +127,7 @@ public abstract class NetworkSimulator
                     }
                     else
                     {
-                        System.out.println("INTERNAL PANIC: Packet has " +
+                        System.out.println("INTERNAL PANIC: basic.Packet has " +
                                            "arrived for unknown entity");
                     }
                     
