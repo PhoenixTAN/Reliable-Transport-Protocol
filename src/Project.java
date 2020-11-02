@@ -45,12 +45,6 @@ public class Project {
 				System.exit(1);
 			}
 
-			///////////////////////////////
-			///////////////////////////////
-			//////////////////////////////
-			/////////////////////////////////
-			
-
 			if (buffer.equals("")) {
 				numOfMessages = 10;
 			} else {
@@ -211,6 +205,6 @@ public class Project {
 		
 		simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 
-		simulator.runumOfMessagesulator();
+		simulator.runNumOfMessageSimulator();
 	}
 }

@@ -4,16 +4,23 @@ import java.io.*;
 
 
 public abstract class NetworkSimulator {
-	// This constant controls the maximum size of the buffer in a Message
-	// and in a Packet
+	/**
+	 * This constant controls the maximum size of the buffer in a Message
+	 * and in a Packet
+	 */
+
 	public static final int MAXDATASIZE = 20;
 
-	// These constants are possible events
+	/**
+	 * These constants are possible events
+	 */
 	public static final int TIMERINTERRUPT = 0;
 	public static final int FROMLAYER5 = 1;
 	public static final int FROMLAYER3 = 2;
 
-	// These constants represent our sender and receiver
+	/**
+	 * These constants represent our sender and receiver
+	 */
 	public static final int A = 0;
 	public static final int B = 1;
 
@@ -21,7 +28,14 @@ public abstract class NetworkSimulator {
 	private double lossProb;
 	private double corruptProb;
 	private double avgMessageDelay;
+
+	/**
+	 *  0 will turn this of
+	 *  Setting a tracing value of 1 or 2 will print out useful information about what is going on inside the emulation
+	 *  A tracing value greater than 2 will display all sorts of odd messages that were used for emulator-debugging purposes
+	 */
 	protected int traceLevel;
+
 	private EventList eventList;
 	private FileWriter outFile;
 
@@ -68,7 +82,7 @@ public abstract class NetworkSimulator {
 		time = 0;
 	}
 
-	public void runumOfMessagesulator() {
+	public void runNumOfMessageSimulator() {
 		Event next;
 
 		// Perform any student-required initialization
