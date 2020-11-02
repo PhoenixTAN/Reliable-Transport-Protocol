@@ -4,6 +4,9 @@ import basic.Message;
 import basic.Packet;
 import utils.GoBackNQueue;
 
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
+
 
 /**
  * Author: Xueyan Xia
@@ -95,30 +98,38 @@ public class GoBackNSimulator extends NetworkSimulator {
      */
 
     public static final int FirstSeqNo = 0;
-    private int WindowSize;
-    private double RxmtInterval;
-    private int LimitSeqNo;
+    private int windowSize;
+    private double retransmitInterval;
+    private int limitSeqNo;
 
     /**
      * Add any necessary class variables here.  Remember, you cannot use
      *      these variables to send messages error free!  They can only hold
      *      state information for A or B.
      */
-    private int senderSeqNumBegin;
-    private int senderSeqNumEnd;
-    private int receiverSeqNumBegin;
-    private int receiverSeqNumEnd;
-
-    private int senderState;
-    private int receiverState;
-
 
     private GoBackNQueue<Packet> senderQueue;
     private GoBackNQueue<Packet> receiverQueue;
+    /** custom statistics */
+    private int retransmissionsByA;
 
     /**
      * Also add any necessary methods (e.g. checksum of a String)
      */
+
+    /**
+     * get checksum of a packet by java.util.zip Checksum and CRC32
+     * */
+    private long getChecksumOfPacket(Packet packet) {
+
+        String text = packet.getSeqnum() + packet.getAcknum() + packet.getPayload();
+        byte[] bytes = text.getBytes();
+
+        Checksum crc32 = new CRC32();
+        crc32.update(bytes, 0, bytes.length);
+
+        return crc32.getValue();
+    }
 
     // This is the constructor.  Don't touch!
     public GoBackNSimulator(int numMessages,
@@ -130,9 +141,14 @@ public class GoBackNSimulator extends NetworkSimulator {
                                    int winsize,
                                    double delay) {
         super(numMessages, loss, corrupt, avgDelay, trace, seed);
-        WindowSize = winsize;
-        LimitSeqNo = winsize + 1; // set appropriately; assumes SR here!
-        RxmtInterval = delay;
+        windowSize = winsize;
+        limitSeqNo = winsize + 1; // <= this value
+        retransmitInterval = delay;
+
+        /**
+         *  custom statistics
+         */
+        retransmissionsByA = 0;
     }
 
     /** This routine will be called whenever the upper layer at the sender [A]
@@ -141,7 +157,32 @@ public class GoBackNSimulator extends NetworkSimulator {
      the receiving upper layer.
      */
     protected void aOutput(Message message) {
+        if (traceLevel > 0) {
+            System.out.println("Calling aOutput()...");
+        }
 
+        int senderTailSeqNum = senderQueue.getTail().getSeqnum();
+
+        // handle new message from layer 5
+        int packetSeqNum = senderTailSeqNum + 1 <= limitSeqNo ? senderTailSeqNum + 1 : 0;
+        Packet newPacket = new Packet(packetSeqNum, 0, 0, new String(message.getData()));
+        newPacket.setChecksum(getChecksumOfPacket(newPacket));
+        senderQueue.add(newPacket);
+
+        // send packet
+        int senderCurSeqNum = senderQueue.getFirst().getSeqnum();
+
+        if (senderCurSeqNum <= senderTailSeqNum) {
+            Packet packet = senderQueue.removeFirst();
+            if(packet == null){
+                System.out.println("aOutput Exception: want to send a packet but there are no packets");
+            }
+            toLayer3(0, packet);
+            if(senderCurSeqNum == FirstSeqNo){
+                startTimer(0, retransmitInterval);
+            }
+        }
+        // else refuse data
     }
 
     /**
@@ -172,10 +213,7 @@ public class GoBackNSimulator extends NetworkSimulator {
      *      of entity A).
      */
     protected void aInit() {
-        senderSeqNumBegin = FirstSeqNo;
-        senderSeqNumEnd = senderSeqNumBegin + WindowSize - 1;
-        senderState = 0;
-        senderQueue = new GoBackNQueue<Packet>(WindowSize);
+        senderQueue = new GoBackNQueue<Packet>(windowSize);
     }
 
 
@@ -197,10 +235,7 @@ public class GoBackNSimulator extends NetworkSimulator {
      *      of entity B).
      */
     protected void bInit() {
-        receiverSeqNumBegin = FirstSeqNo;
-        receiverSeqNumEnd = receiverSeqNumBegin + WindowSize - 1;
-        receiverState = 0;
-        receiverQueue = new GoBackNQueue<Packet>(WindowSize);
+        receiverQueue = new GoBackNQueue<Packet>(windowSize);
     }
 
     // Use to print final statistics

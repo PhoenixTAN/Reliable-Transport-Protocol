@@ -8,6 +8,8 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
     protected int tail;
     protected int windowSize;
 
+    private int curSeqNum;
+
 
     public GoBackNQueue(int _windowSize) {
         windowSize = _windowSize;
@@ -22,7 +24,7 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
 
 
     public boolean isWindowFull() {
-        if ( tail % windowSize == 0 ) {
+        if ( (tail) % windowSize == 0 ) {
             return true;
         }
         return false;
@@ -39,7 +41,7 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
 
     public void add(T t) {
         buffer.add(t);
-        tail++;
+        tail = isWindowFull() ? tail : tail++;
     }
 
 
@@ -51,21 +53,20 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
     }
 
 
-    public boolean removeFirst() {
-        if ( buffer.size() < 1 ) {
-            return false;
+    public T removeFirst() {
+        if(buffer.isEmpty()){
+            return null;
         }
-        buffer.remove(0);
-        return true;
+        return buffer.remove(0);
     }
 
 
-    public void slide(int ackNum, int baseNum) {
-        while ( baseNum <= ackNum ) {
+    public void slide(int ackSeqNum, int baseSeqNum) {
+        while ( baseSeqNum <= ackSeqNum ) {
             removeFirst();
-            baseNum++;
+            baseSeqNum++;
             // update tail
-            tail = Math.min(windowSize - 1, buffer.size());
+            tail = Math.min(windowSize, buffer.size());
         }
     }
 
@@ -75,5 +76,9 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
             sb.append(buffer.get(i));
         }
         return sb.toString() + " tail: " + tail;
+    }
+
+    public T getTail(){
+        return buffer.get(tail - 1);
     }
 }

@@ -63,12 +63,11 @@ public class StopAndWaitQueue<T> implements SlidingWindowQueue<T> {
 	}
 	
 	
-	public boolean removeFirst() {
-		if ( buffer.size() < 1 ) {
-			return false;
+	public T removeFirst() {
+		if(buffer.isEmpty()){
+			return null;
 		}
-		buffer.remove(0);
-		return true;
+		return buffer.remove(0);
 	}
 	
 	
@@ -77,7 +76,7 @@ public class StopAndWaitQueue<T> implements SlidingWindowQueue<T> {
 			removeFirst();
 			baseNum++;
 			// update tail
-			tail = Math.min(windowSize - 1, buffer.size());
+			tail = Math.min(windowSize, buffer.size());
 		}	
 	}
 	
