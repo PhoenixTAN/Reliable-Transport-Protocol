@@ -9,89 +9,17 @@ import utils.SlidingWindowQueue;
 import utils.StopAndWaitQueue;
 
 /**
- * Author: Ziqi Tan, Xueyan Xia
- * */
-public class StopAndWaitSimulator extends NetworkSimulator {
-	/**
-	 * Predefined Constants (static member variables):
-	 *
-	 * 		int MAXDATASIZE : the maximum size of the basic.Message data and basic.Packet payload
-	 * 		int A : a predefined integer that represents entity A
-	 * 		int B : a predefined integer that represents entity B
-	 *
-	 * Predefined Member Methods:
-	 * void stopTimer(int entity):
-	 * 		Stops the timer running at "entity" [A or B]
-	 *
-	 * void startTimer(int entity, double increment):
-	 * 		Starts a timer running at "entity" [A or B],
-	 * 		which will expire in "increment" time units, causing the interrupt
-	 * 		handler to be called. You should only call this with A.
-	 *
-	 * void toLayer3(int callingEntity, basic.Packet p)
-	 * 		Puts the packet "p" into the network from "callingEntity" [A or B]
-	 *
-	 * void toLayer5(String dataSent)
-	 * 		Passes "dataSent" up to layer 5
-	 *
-	 * double getTime()
-	 * 		Returns the current time in the simulator. Might be useful for debugging.
-	 *
-	 * int getTraceLevel()
-	 * 		Returns TraceLevel
-	 *
-	 * void printEventList()
-	 * 		Prints the current event list to stdout.
-	 * 		Might be useful for debugging, but probably not.
-	 *
-	 *
-	 * Predefined Classes:
-	 *
-	 * basic.Message: Used to encapsulate a message coming from layer 5
-	 * Constructor:
-	 * 		basic.Message(String inputData): creates a new basic.Message containing "inputData"
-	 * Methods:
-	 * 		boolean setData(String inputData):
-	 * 			sets an existing basic.Message's data to "inputData" returns true on success, false otherwise
-	 *
-	 * 		String getData():
-	 * 			returns the data contained in the message
-	 *
-	 * basic.Packet: Used to encapsulate a packet
-	 * Constructors:
-	 * 		basic.Packet (basic.Packet p):
-	 * 			creates a new basic.Packet that is a copy of "p"
-	 * 		basic.Packet (int seq, int ack, int check, String newPayload)
-	 * 			creates a new basic.Packet with a sequence field of "seq", an ack field of "ack", a checksum
-	 * 			field of "check", and a payload of "newPayload"
-	 * 		basic.Packet (int seq, int ack, int check)
-	 * 			create a new basic.Packet with a sequence field of "seq", an ack field of
-	 * 			"ack", a checksum field of "check", and an empty payload
-	 * Methods:
-	 * 		boolean setSeqnum(int n)
-	 * 			sets the basic.Packet's sequence field to "n" returns true on
-	 * 			success, false otherwise
-	 * 		boolean setAcknum(int n)
-	 * 			sets the basic.Packet's ack field to "n" returns true on success, false otherwise
-	 * 		boolean setChecksum(int n)
-	 * 			sets the basic.Packet's checksum to "n" returns true on success, false otherwise
-	 * 		boolean setPayload(String newPayload)
-	 * 			sets the basic.Packet's payload to "newPayload" returns true on success, false otherwise
-	 * 		int getSeqnum()
-	 * 			returns the contents of the basic.Packet's sequence field
-	 * 		int getAcknum()
-	 * 			returns the contents of the basic.Packet's ack field
-	 * 		int getChecksum()
-	 * 			returns the checksum of the basic.Packet
-	 * 		int getPayload()
-	 * 			returns the basic.Packet's payload
-	 */
-
-	/**
-	 * Please use the following variables in your routines. int WindowSize : the
-	 * window size double RxmtInterval : the retransmission timeout int LimitSeqNo :
-	 * when sequence number reaches this value, it wraps around
-	 */
+ * @author: Ziqi Tan
+ * @description:
+ * 		1. Your protocol should use only ACK (i.e. no NACK) packets. 
+ * 		2. The receiver should be able to buffer out-of-order (OOO) packets, 
+ * 		and send cumulative ACKs. 
+ * 		3. The sender should retransmit only the next missing (unACK¡¯ed) packet either 
+ * 		on a timeout or duplicate ACK. 
+ */
+public class SelectiveRepeatSimulator extends NetworkSimulator {
+	
+	
 	public static final int FirstSeqNo = 0;
 	private int windowSize;
 	private double retransmitInterval;
@@ -135,14 +63,14 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		return crc32.getValue();
 	}
 
-	// This is the constructor. Don't touch!
-	public StopAndWaitSimulator(int numMessages, double loss, double corrupt, double avgDelay, int trace, int seed,
+
+	public SelectiveRepeatSimulator(int numMessages, double loss, double corrupt, double avgDelay, int trace, int seed,
 			int winsize, double timeout) {
 		
 		super(numMessages, loss, corrupt, avgDelay, trace, seed);
 		
 		windowSize = winsize;
-		limitSeqNo = winsize + 1;	// set appropriately; assumes Stop and Wait here!
+		limitSeqNo = winsize * 2;	// set appropriately; assumes Stop and Wait here!
 		retransmitInterval = timeout;
 		
 		/** initialize custom statistics */
@@ -415,5 +343,4 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 		// System.out.println("Example statistic you want to check e.g. number of ACK
 		// packets received by A :" + "<YourVariableHere>");
 	}
-
 }
