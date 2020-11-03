@@ -33,15 +33,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * */
 	private int senderSequenceNumber;
 	
-	/**
-	 * 0: wait for call 0 from above, 1: wait for ACK 0
-	 * 2: wait for call 1 from above, 3: wait for ACK 1
-	 * */
-	private int senderState;
-
-	/** 0: wait for 0 from below, 1: wait for 1 from below */
-	private int receiverState;
-	
 	private SlidingWindowQueue<Packet> senderBuffer;
 	
 	/** custom statistics */
@@ -85,7 +76,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * */
 	protected void aInit() {
 		senderSequenceNumber = FirstSeqNo;
-		senderState = 0;
 		senderBuffer = new StopAndWaitQueue<Packet>(windowSize);
 	}
 
@@ -100,49 +90,9 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			System.out.println("Calling aOutput()...");
 		}
 		
-		switch(senderState) {
-			case 0:		// wait for call 0 from above
-			case 2:		// wait for call 1 from above
-				Packet packet = null;
-				// check the sender buffer first
-				if ( !senderBuffer.isWindowEmpty() ) {
-					
-					// get the message but not delete it
-					Packet pkt = senderBuffer.getFirst();	
-					
-					// System.out.println("Current sender buffer: " + senderBuffer);
-					packet = new Packet(pkt);
-				}
-				else {
-					packet = new Packet(senderSequenceNumber, 0, 0, new String(message.getData()));
-					long checksum = getChecksumOfPacket(packet);
-					packet.setChecksum(checksum);
-				}
-
-				// then buffer the new message
-				senderBuffer.add(new Packet(packet));
-
-				toLayer3(0, packet);	// udt_send(packet)
-				startTimer(0, retransmitInterval);
-
-				// update sequence number
-				senderSequenceNumber = (senderSequenceNumber + 1) % limitSeqNo;
-
-				// update sender state
-				senderState++;	// state 0 -> state 1 and state 2 -> state 3
-				
-				break;
-
-			case 1:		// wait for ACK 0
-			case 3:		// wait for ACK 1
-				// buffer this message from layer 5
-				senderBuffer.add(new Packet(senderSequenceNumber, 0, 0, new String(message.getData())));
-				// update sequence number
-				senderSequenceNumber = (senderSequenceNumber + 1) % limitSeqNo;
-				break;
-			default:
-				System.out.println("Unexpected sender state in aOutput().");
-		}
+		
+		
+		
 
 	}
 
@@ -160,42 +110,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		int ackNum = packet.getAcknum();
 		long checksum = packet.getChecksum();
 		
-		switch(senderState) {
-			case 1:
-				// sender is waiting for ACK 0
-				// if the packet is corrupted or ack is 1
-				// then do nothing
-				
-				// if not corrupted and ack is 0
-				// then stop timer and wait for call 1 from above
-				if ( ackNum == 0 && checksum == getChecksumOfPacket(packet) ) {
-					stopTimer(0);
-					senderState++;
-					// System.out.println("sender state becomes: " + senderState);
-					int baseNum = senderBuffer.getFirst().getSeqnum();
-					senderBuffer.slide(ackNum, baseNum);
-				}
-				break;
-			case 3:
-				if ( ackNum == 1 && checksum == getChecksumOfPacket(packet) ) {
-					stopTimer(0);
-					senderState = 0;	// wait for call 0 from above
-					// System.out.println("sender state becomes: " + senderState);
-					int baseNum = senderBuffer.getFirst().getSeqnum();
-					senderBuffer.slide(ackNum, baseNum);
-				}
-				break;
-			case 0:
-			case 2:
-				if ( traceLevel > 0 ) {
-					System.out.println("current sender state: " + senderState);
-					System.out.println("When waiting for call from above, receive packet from layer 3. Do nothing.");
-				}
-				break;
-			default:
-				System.out.println("WARNING!! Unexpected sender state: " + senderState +  " in aInput().");
-				
-		}
+		
 
 	}
 
@@ -209,17 +124,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			System.out.println("Calling aTimerInterrupt()...");
 		}
 		
-		switch(senderState) {
-			case 1:
-			case 3:
-				Packet packet = senderBuffer.getFirst();
-				toLayer3(0, new Packet(packet));	// udt_send()
-				retransmissionsByA++;	// statistics
-				startTimer(0, retransmitInterval);
-				break;
-			default:
-				System.out.println("Unexpected sender state in aTimerInterrupt()");
-		}
+		
 	}
 
 
@@ -229,7 +134,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * It can be used to do any required initialization.
 	 * */
 	protected void bInit() {
-		receiverState = 0;
+		
 	}
 
 	/**
@@ -245,43 +150,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		int seqNum = packet.getSeqnum();
 		long checksum = packet.getChecksum();
 		
-		switch(receiverState) {
-			case 0:
-				// if corrupted or sequence number is 1
-				if ( checksum != getChecksumOfPacket(packet) || seqNum == 1) {
-					Packet pkt = new Packet(0, 1, 0);
-					pkt.setChecksum(getChecksumOfPacket(pkt));
-					toLayer3(1, pkt);
-				}
-				// if sequence number is 0
-				else if( checksum == getChecksumOfPacket(packet) && seqNum == 0) {
-					toLayer5(packet.getPayload());
-					Packet pkt = new Packet(0, 0, 0);
-					pkt.setChecksum(getChecksumOfPacket(pkt));
-					toLayer3(1, pkt);
-					receiverState++;
-				}
-				break;
-			case 1:
-				// if corrupted or sequence number is 0
-				if ( checksum != getChecksumOfPacket(packet) || seqNum == 0) {
-					Packet pkt = new Packet(1, 0, 0);
-					pkt.setChecksum(getChecksumOfPacket(pkt));
-					toLayer3(1, pkt);
-				}
-				// if sequence number is 1
-				else if( checksum == getChecksumOfPacket(packet) && seqNum == 1) {
-					toLayer5(packet.getPayload());
-					Packet pkt = new Packet(1, 1, 0);
-					pkt.setChecksum(getChecksumOfPacket(pkt));
-					toLayer3(1, pkt);
-					receiverState = 0;
-				}
-				break;
-			default:
-				System.out.println("Unexpected sender state in bInput()");
-				
-		}
+		
 	}
 
 
