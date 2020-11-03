@@ -1,0 +1,126 @@
+PA #2 -- Part I Grade Criteria (Total Score is out of 100)
+
+Name ____________________________
+
+==============================================
+Stop & Wait (window = 1) Working correctly
+Score is out of 10 pts
+==============================================
+____ works for no loss and no corruption (2 pts)
+____ works for loss and no corruption    (3 pts)
+     __ recovery from DATA loss (1 pt)
+     __ recovery from ACK loss  (1 pt)
+     __ error detection by timeout (1 pt) 
+____ works for corruption and no loss    (3 pts)
+     __ recovery from DATA corruption (1 pt)
+     __ recovery from ACK corruption  (1 pt)
+     __ error detection by timeout (1 pt)
+____ works for both loss and corruption  (2 pts)
+
+Score _____
+
+==============================================
+SR (window > 1) 
+Score is out of 90 pts
+==============================================
+
+SR (with cumulative ACK) works correctly (35 pts) 
+____ C1: works for no loss + no corruption (5 pts)
+____ cases for loss and/or corruption (30 pts)
+     __ C2: identify (on output trace) case where ack is lost/corrupted and 
+        a later cumulative ack moves sender window by more than 1 (10 pts)
+     __ C3: identify (on output trace) case where when data packet is lost/corrupted, 
+        and data is retransmitted after RTO (5 pts)
+     __ C4: identify (on output trace) case where when data packet is lost/corrupted, 
+        and data is retransmitted after receiving duplicate ack (5 pts)
+     __ C5: identify (on output trace) case where when data packet is lost/corrupted, 
+        and the retransmitted data is delivered and a cumulative ack moves the sender 
+        window by more than 1 (10 pts)
+
+Logistics (30 pts)
+___ Well designed, 
+    e.g., checksum as a function, finite state machines, etc.   (10 pts)
+___ Code is readable, i.e. commented & formatted 		(5 pts)
+___ The overall design & how it works described 		(5 pts)
+___ Possible tradeoffs & extensions discussed,
+    e.g., dealing with wrapped seq nos, adding conn establish,..(3 pts)
+___ Has compilation instructions                 		(3 pts)
+___ PDF e-copy submitted & complete with highlighted traces     (4 pts)
+
+
+Statistics (20 pts)
+
+___ Justification for retransmission timer	     		(3 pts)
+___ # retransmits under no loss & no corruption    		(2 pts)	
+___ # retransmits as function of loss 			    	(2 pts)
+___ # retransmits as function of corruption         	        (2 pts)
+___ Average RTT as function of loss/corruption  		(3 pts)
+___ Average time to communicate packet vs. loss  		(2 pts)
+___ Average time to communicate packet vs. corruption  	        (2 pts)
+___ Evidence of several runs, confidence intervals shown        (4 pts)
+	
+
+
+Error Conditions (5 pts)
+___ Well tested, 
+    e.g., reasonable measured loss and corruption probabilities, etc. 
+
+Score _____
+=================================================
+
+Total Score ___________
+
+=============================================================
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+PA #2 - Part II 
+Grade Criteria (Total Score is out of 100)
+	
+Name _________________________________
+	
+	
+	
+================================================
+GBN with SACK option (window >1) 
+Score is out 100 pts
+================================================
+	
+GBN+SACK works correctly (40 pts)
+	
+____ same behavior as SR for no loss & no corruption (6 pts)
+____ works for loss and no corruption 		(8 pts)
+____ works for no loss and corruption		(8 pts)
+____ works for both loss and corruption		(8 pts)
+____ Annotations on traces show difference 	(10 pts)
+                      between SN and GBN+SACK		
+	
+	
+Logistics (20 pts)
+	
+____ Code readable, i.e. commented & formatted  (8 pts)
+____ Protocol design & how it works described 	(8 pts)
+____ PDF e-copy submitted & complete		(4 pts)
+ 
+	
+Statistics (30 pts)
+	
+_____ Throughput, Goodput, average packet delay, SR vs. GBN+SACK 
+		under corruption		(10 pts)
+_____ Throughput, Goodput, average packet delay, SR vs. GBN+SACK 
+		under losses			(10 pts)
+_____ Evidence of several runs, 
+		confidence intervals shown 	(10 pts)
+		
+
+Error Conditions  (10 pts)
+	
+_____ Well tested,
+	e.g., 
+	reasonable measured loss and corruption probabilities, etc. 
+
+
+	
+TOTAL SCORE ______
+
+	
