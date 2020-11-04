@@ -72,4 +72,8 @@ public class EventListImpl implements EventList {
 
 		return time;
 	}
+
+	public boolean isEmpty(){
+		return data.isEmpty();
+	}
 }

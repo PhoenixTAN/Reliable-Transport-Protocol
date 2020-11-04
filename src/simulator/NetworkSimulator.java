@@ -162,7 +162,11 @@ public abstract class NetworkSimulator {
 					break;
 	
 				case FROMLAYER5:
-	
+
+					// If we've reached the maximum message count, exit the main loop
+					if (numOfMessages == maxMessages)
+						break;
+
 					// If a message has arrived from layer 5, we need to
 					// schedule the arrival of the next message
 					generateNextArrival();
@@ -177,11 +181,7 @@ public abstract class NetworkSimulator {
 	
 					// Increment the message counter
 					numOfMessages++;
-	
-					// If we've reached the maximum message count, exit the main loop
-					if (numOfMessages == maxMessages + 1)
-						break;
-	
+
 					// Let the student handle the new message
 					aOutput(new Message(new String(nextMessage)));
 					break;
@@ -189,7 +189,7 @@ public abstract class NetworkSimulator {
 				default:
 					System.out.println("INTERNAL PANIC: Unknown event type");
 			}
-			if (numOfMessages == maxMessages + 1)
+			if (eventList.isEmpty())
 				break;
 		}
 		System.out.println("Simulator terminated at time " + getTime());

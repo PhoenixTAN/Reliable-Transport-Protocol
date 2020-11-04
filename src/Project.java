@@ -1,6 +1,11 @@
 import java.io.*;
 
+<<<<<<< Updated upstream
 import simulator.SelectiveRepeatSimulator;
+=======
+import simulator.GoBackNSimulator;
+import simulator.NetworkSimulator;
+>>>>>>> Stashed changes
 import simulator.StopAndWaitSimulator;
 
 /**
@@ -22,7 +27,7 @@ import simulator.StopAndWaitSimulator;
  */
 public class Project {
 	public final static void main(String[] argv) {
-		SelectiveRepeatSimulator simulator;
+		NetworkSimulator simulator;
 
 		int numOfMessages = -1;
 		double loss = -1;
@@ -205,9 +210,10 @@ public class Project {
 				}
 			}
 		}
-		
+
 		// simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
-		simulator = new SelectiveRepeatSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		// simulator = new SelectiveRepeatSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		simulator = new GoBackNSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 		simulator.runNumOfMessageSimulator();
 	}
 }

@@ -12,4 +12,6 @@ public interface EventList {
 	public Event removeTimer(int entity);
 
 	public double getLastPacketTime(int entityTo);
+
+	public boolean isEmpty();
 }

@@ -15,11 +15,12 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
         windowSize = _windowSize;
         buffer = new ArrayList<T>(_windowSize);
         tail = 0;
+        curSeqNum = 0;
     }
 
 
-    public T getDatabyIndex(int seqNum) {
-        return buffer.get(seqNum);
+    public T getDatabyIndex(int index) {
+        return buffer.get(index);
     }
 
 
@@ -41,7 +42,7 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
 
     public void add(T t) {
         buffer.add(t);
-        tail = isWindowFull() ? tail : tail++;
+        tail = isWindowFull() ? tail : ++tail;
     }
 
 
@@ -79,6 +80,21 @@ public class GoBackNQueue<T> implements SlidingWindowQueue<T>  {
     }
 
     public T getTail(){
+        if(tail == 0){
+            return null;
+        }
         return buffer.get(tail - 1);
+    }
+
+    public int getCurSeqNum() {
+        return curSeqNum;
+    }
+
+    public void setCurSeqNum(int curSeqNum) {
+        this.curSeqNum = curSeqNum;
+    }
+
+    public boolean isBufferFull() {
+        return buffer.size() >= 5;
     }
 }
