@@ -1,5 +1,6 @@
 package simulator;
 
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -34,6 +35,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * */
 	private int senderSequenceNumber;
 	private int lastACKNum;
+	private boolean isTimerStarted;
 	
 	private SelectiveRepeatSenderQueue<Packet> senderBuffer;
 	private SelectiveRepeatReceiverQueue<Packet> receiverBuffer;
@@ -67,8 +69,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		limitSeqNo = winsize * 2;	// set appropriately; assumes Stop and Wait here!
 		retransmitInterval = timeout;
 		
-		/** initialize custom statistics */
-		retransmissionsByA = 0;
 	}
 
 
@@ -81,6 +81,9 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		senderSequenceNumber = FirstSeqNo;
 		lastACKNum = -1;
 		senderBuffer = new SelectiveRepeatSenderQueue<Packet>(windowSize);
+		isTimerStarted = false;
+		/** initialize custom statistics */
+		retransmissionsByA = 0;
 	}
 
 	/**
@@ -116,9 +119,9 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		}
 		
 		// be careful the timer
-		if ( prepareTimer ) {
-			stopTimer(0);
+		if ( prepareTimer && !isTimerStarted ) {
 			startTimer(0, retransmitInterval);
+			isTimerStarted = true;
 		}
 		
 	}
@@ -155,8 +158,8 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			// retransmit only the next missing unACK'ed packet
 			System.out.println("duplicate ACK");
 			toLayer3(0, new Packet(nextPacket));
+			retransmissionsByA++;
 			// restart timer
-			stopTimer(0);
 			startTimer(0, retransmitInterval);
 			
 			return ;
@@ -165,7 +168,13 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		// cumulative ACK
 		senderBuffer.slide(cumulativeACK, baseNum);
 		// do we need to restart timer here?
-		stopTimer(0);
+		// if no more packets to be ACKed
+		// then stop the timer
+		if ( senderBuffer.isWindowEmpty() ) {
+			stopTimer(0);
+			isTimerStarted = false;
+		}
+		
 		
 		// update lastACKNum
 		lastACKNum = cumulativeACK;
@@ -184,7 +193,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		Packet nextPacket = senderBuffer.getFirst();
 		toLayer3(0, new Packet(nextPacket));
-		stopTimer(0);
 		startTimer(0, retransmitInterval);
 		
 	}
@@ -238,11 +246,11 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			else {
 				receiverBuffer.insert(new Packet(packet), (seqNum + 1 + limitSeqNo - 1 - baseSeqNum));
 			}
+			System.out.println(receiverBuffer);
 			
 			// slide the window and deliver the in-order packets to layer 5
 			if ( seqNum ==  baseSeqNum ) {
-				System.out.println(receiverBuffer);
-
+				
 				int index = 0;
 				Packet nextPacket = receiverBuffer.getByIndex(index);
 				while ( nextPacket != null ) {
@@ -259,8 +267,10 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 				}
 	
 				// delete the packet
-				receiverBuffer.slide(index-1);
-				
+				receiverBuffer.slide(index);
+				receiverBuffer.setCurrentBaseSeqNum((baseSeqNum + index) % limitSeqNo);
+				System.out.println("Receive window after slide: ");
+				System.out.println(receiverBuffer);
 				// send cumulative ACK
 				Packet ackPacket = new Packet(0, (seqNum + index - 1) % limitSeqNo, 0);
 				ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
@@ -272,13 +282,13 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		// if the sequence number in [rcv_base - N, rcv_base - 1]
 		// then generate the ACK
 		else {
+			System.out.println("Generate the ACK again.");
 			Packet ackPacket = new Packet(0, seqNum, 0);
 			ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
 			toLayer3(1, ackPacket);
 		}
 		
 		// ignore other packets
-		
 		
 	}
 
@@ -302,9 +312,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 				(double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
 		lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
 		
-		/**
-		 * Ratio of corrupted packets:
-		 * */
+		/** Ratio of corrupted packets */
 		double corruptedRatio = nCorrupt / 
 				(double)((totalPacketsTransmittedByA + retransmissionsByA) 
 						+ ACKSentByB - (retransmissionsByA - nCorrupt));

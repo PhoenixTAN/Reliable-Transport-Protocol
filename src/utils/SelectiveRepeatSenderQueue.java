@@ -21,6 +21,7 @@ public class SelectiveRepeatSenderQueue<T> implements SlidingWindowQueue<T> {
 		tail = 0;
 	}
 	
+	
 	public boolean hasNextToSend() {
 		if ( nextSeqNum < tail ) {
 			return true;
@@ -89,9 +90,9 @@ public class SelectiveRepeatSenderQueue<T> implements SlidingWindowQueue<T> {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		for ( int i = 0; i < tail; i++ ) {
-			sb.append(buffer.get(i));
+			sb.append(buffer.get(i) + "\n");
 		}
-		return sb.toString() + " tail: " + tail;
+		return sb.toString() + "tail: " + tail;
 	}
 
 }

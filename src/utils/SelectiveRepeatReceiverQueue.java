@@ -42,6 +42,10 @@ public class SelectiveRepeatReceiverQueue<T> {
 	public int getCurrentBaseSeqNum() {
 		return currentBaseSeqNum;
 	}
+	
+	public void setCurrentBaseSeqNum(int seqNum) {
+		currentBaseSeqNum = seqNum;
+	}
 
 	public void insert(T t, int index) {
 		receiveWindow[index] = t;
@@ -65,8 +69,6 @@ public class SelectiveRepeatReceiverQueue<T> {
 				break;
 			}
 			receiveWindow[i] = receiveWindow[j];
-			// TODO
-			currentBaseSeqNum = (currentBaseSeqNum + 1) % (windowSize * 2);
 		}
 		while ( i < receiveWindow.length ) {
 			receiveWindow[i] = null;
@@ -80,6 +82,7 @@ public class SelectiveRepeatReceiverQueue<T> {
 		for ( int i = 0; i < receiveWindow.length; i++ ) {
 			text += receiveWindow[i] + "\n";
 		}
+		text += "currentBaseSeqNum: " + currentBaseSeqNum + "\n";
 		return text;
 	}
 	

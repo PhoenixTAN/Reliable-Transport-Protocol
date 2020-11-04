@@ -1,12 +1,7 @@
 import java.io.*;
 
-<<<<<<< Updated upstream
-import simulator.SelectiveRepeatSimulator;
-=======
-import simulator.GoBackNSimulator;
-import simulator.NetworkSimulator;
->>>>>>> Stashed changes
-import simulator.StopAndWaitSimulator;
+import simulator.*;
+
 
 /**
  * @author CS-655
@@ -212,8 +207,8 @@ public class Project {
 		}
 
 		// simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
-		// simulator = new SelectiveRepeatSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
-		simulator = new GoBackNSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		simulator = new SelectiveRepeatSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		// simulator = new GoBackNSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 		simulator.runNumOfMessageSimulator();
 	}
 }
