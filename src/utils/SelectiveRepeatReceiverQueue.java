@@ -1,9 +1,5 @@
 package utils;
 
-import java.util.ArrayList;
-
-import basic.Packet;
-
 
 /**
  * Author: Ziqi Tan
@@ -11,32 +7,11 @@ import basic.Packet;
 public class SelectiveRepeatReceiverQueue<T> {
 
 	private T[] receiveWindow;
-	private int windowSize;
 	private int currentBaseSeqNum;
 	
 	public SelectiveRepeatReceiverQueue(int _windowSize) {
 		receiveWindow = (T[]) new Object[_windowSize];
-		windowSize = _windowSize;
 		currentBaseSeqNum = 0;
-	}
-	
-	public boolean isBufferEmpty() {
-		
-		// for test
-		boolean hasSomething = false;
-		for ( int i = 1; i < receiveWindow.length; i++ ) {
-			if ( receiveWindow[i] != null ) {
-				hasSomething = true;
-				break;
-			}
-		}
-		if ( hasSomething && !(receiveWindow[0] == null) ) {
-			System.out.println("Something wrong in receiver buffer");
-		}
-		
-		// for test
-		
-		return receiveWindow[0] == null;
 	}
 	
 	public int getCurrentBaseSeqNum() {
@@ -56,6 +31,9 @@ public class SelectiveRepeatReceiverQueue<T> {
 	}
 
 	public T getByIndex(int index) {
+		if ( index >= receiveWindow.length ) {
+			return null;
+		}
 		return receiveWindow[index];
 	}
 	
@@ -65,9 +43,6 @@ public class SelectiveRepeatReceiverQueue<T> {
 	public void slide(int index) {
 		int i = 0;
 		for ( int j = index; j < receiveWindow.length; i++, j++ ) {
-			if (receiveWindow[j] == null) {
-				break;
-			}
 			receiveWindow[i] = receiveWindow[j];
 		}
 		while ( i < receiveWindow.length ) {
@@ -77,13 +52,17 @@ public class SelectiveRepeatReceiverQueue<T> {
 
 	}
 	
+	
 	public String toString() {
-		String text = "";
+		StringBuilder text = new StringBuilder();
+		
 		for ( int i = 0; i < receiveWindow.length; i++ ) {
-			text += receiveWindow[i] + "\n";
+			text.append(receiveWindow[i] + "\n");
 		}
-		text += "currentBaseSeqNum: " + currentBaseSeqNum + "\n";
-		return text;
+		
+		text.append("currentBaseSeqNum: " + currentBaseSeqNum + "\n");
+		
+		return text.toString();
 	}
 	
 	/**

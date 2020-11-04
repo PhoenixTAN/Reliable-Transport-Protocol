@@ -11,36 +11,36 @@ public class SelectiveRepeatSenderQueue<T> implements SlidingWindowQueue<T> {
 	
 	private int windowSize;
 	
-	private int nextSeqNum;
+	private int nextSeqNumIndex;
 	private int tail;
 	
 	public SelectiveRepeatSenderQueue(int _windowSize) {
 		buffer = new ArrayList<T>();
 		windowSize = _windowSize;
-		nextSeqNum = 0;
+		nextSeqNumIndex = 0;
 		tail = 0;
 	}
 	
-	
 	public boolean hasNextToSend() {
-		if ( nextSeqNum < tail ) {
+		if ( nextSeqNumIndex < tail ) {
 			return true;
 		}
 		return false;
 	}
 	
 	public T getNextToSend() {
-		if (nextSeqNum >= tail) {
+		if ( nextSeqNumIndex >= tail ) {
 			return null;
 		}
-		T nextToSend = buffer.get(nextSeqNum);
-		nextSeqNum++;
+		T nextToSend = buffer.get(nextSeqNumIndex);
+		nextSeqNumIndex++;
 		return nextToSend;
 	}
 
 	@Override
 	public boolean isWindowFull() {
-		if ( tail % windowSize == 0 ) {
+		// be careful the index tail
+		if ( (tail + 1) % windowSize == 0 ) {
 			return true;
 		}
 		return false;
@@ -83,16 +83,20 @@ public class SelectiveRepeatSenderQueue<T> implements SlidingWindowQueue<T> {
 			baseNum++;
 			// update tail
 			tail = Math.min(windowSize, buffer.size());
-			nextSeqNum = tail;	// be careful 
+			nextSeqNumIndex = tail;	// be careful 
 		}	
 	}
 	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		for ( int i = 0; i < tail; i++ ) {
+		for ( int i = 0; i < buffer.size(); i++ ) {
+			if ( i == tail ) {
+				sb.append("================ tail: " + tail + "==============" + "\n");
+			}
 			sb.append(buffer.get(i) + "\n");
+			
 		}
-		return sb.toString() + "tail: " + tail;
+		return sb.toString();
 	}
 
 }

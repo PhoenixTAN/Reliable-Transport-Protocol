@@ -208,6 +208,7 @@ public class Project {
 		// simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 		simulator = new SelectiveRepeatSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 		// simulator = new GoBackNSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		
 		simulator.runNumOfMessageSimulator();
 	}
 }

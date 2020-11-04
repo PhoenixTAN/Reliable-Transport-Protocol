@@ -1,6 +1,5 @@
 package simulator;
 
-import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -21,13 +20,11 @@ import utils.SelectiveRepeatSenderQueue;
  */
 public class SelectiveRepeatSimulator extends NetworkSimulator {
 	
-	
 	public static final int FirstSeqNo = 0;
 	private int windowSize;
 	private double retransmitInterval;
 	private int limitSeqNo;
 
-	
 	/**
 	 * Add any necessary class variables here. Remember, you cannot use
 	 * these variables to send messages error free!
@@ -42,6 +39,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	
 	/** custom statistics */
 	private int retransmissionsByA;
+	private int originalPacketsTransmittedByA;
 
 	/** Also add any necessary methods (e.g. checksum of a String) */ 
 	
@@ -59,7 +57,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		return crc32.getValue();
 	}
 
-
 	public SelectiveRepeatSimulator(int numMessages, double loss, double corrupt, double avgDelay, int trace, int seed,
 			int winsize, double timeout) {
 		
@@ -68,9 +65,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		windowSize = winsize;
 		limitSeqNo = winsize * 2;	// set appropriately; assumes Stop and Wait here!
 		retransmitInterval = timeout;
-		
 	}
-
 
 	/**
 	 * This routine will be called once, before any of your other A-side
@@ -82,8 +77,10 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		lastACKNum = -1;
 		senderBuffer = new SelectiveRepeatSenderQueue<Packet>(windowSize);
 		isTimerStarted = false;
+		
 		/** initialize custom statistics */
 		retransmissionsByA = 0;
+		originalPacketsTransmittedByA = 0;
 	}
 
 	/**
@@ -99,31 +96,35 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		Packet packet = new Packet(senderSequenceNumber, 0, 0, message.getData());
 		packet.setChecksum(getChecksumOfPacket(packet));
-
+		
+		// buffer this packet
 		senderBuffer.add(packet);
-		System.out.println(senderBuffer);
+		if ( traceLevel > 3 ) {
+			System.out.println(senderBuffer);
+		}
 		
 		// update sequence number
 		senderSequenceNumber = (senderSequenceNumber + 1) % limitSeqNo;
 		
+		// if the sender still has packet to send, start the timer
 		boolean prepareTimer = false;
 		if ( senderBuffer.hasNextToSend() ) {
 			prepareTimer = true;
 		}
 		
-		// send all available packet
+		// send all available packets
 		Packet nextPacket = null;
 		while ( senderBuffer.hasNextToSend() ) {
 			nextPacket = senderBuffer.getNextToSend();
 			toLayer3(0, new Packet(nextPacket));
+			originalPacketsTransmittedByA++;	// statistics
 		}
 		
-		// be careful the timer
+		// be careful of the timer
 		if ( prepareTimer && !isTimerStarted ) {
 			startTimer(0, retransmitInterval);
 			isTimerStarted = true;
 		}
-		
 	}
 
 	/**
@@ -139,26 +140,38 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		// if the packet corrupts, discard it
 		if ( getChecksumOfPacket(packet) != packet.getChecksum() ) {
-			if ( traceLevel > 0 ) {
+			if ( traceLevel > 3 ) {
 				System.out.println("ACK from B is corrupted!");
 			}
 			return ;
 		}
-		System.out.println(senderBuffer);
-		int cumulativeACK = packet.getAcknum();
-		Packet nextPacket = senderBuffer.getFirst();
-		// be careful if the sender buffer is empty
+		
+		if ( traceLevel > 3 ) {
+			System.out.println(senderBuffer);
+		}
+		
+		// packet that A just received
+		int cumulativeACK = packet.getAcknum();		
+		// the next packet that A is waiting for ACK
+		Packet nextPacket = senderBuffer.getFirst(); 
+		
+		// be careful if A's buffer is empty
 		if (nextPacket == null) {
 			return ;
 		}
+		
 		int baseNum = nextPacket.getSeqnum();
 		
-		// duplicate ACK
+		// duplicate ACK then retransmit 
 		if ( cumulativeACK == lastACKNum ) {
+			if ( traceLevel > 3 ) {
+				System.out.println("duplicate ACK");
+			}
 			// retransmit only the next missing unACK'ed packet
-			System.out.println("duplicate ACK");
 			toLayer3(0, new Packet(nextPacket));
-			retransmissionsByA++;
+			
+			retransmissionsByA++;	// statistics
+			
 			// restart timer
 			startTimer(0, retransmitInterval);
 			
@@ -167,14 +180,13 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		// cumulative ACK
 		senderBuffer.slide(cumulativeACK, baseNum);
-		// do we need to restart timer here?
+
 		// if no more packets to be ACKed
 		// then stop the timer
 		if ( senderBuffer.isWindowEmpty() ) {
 			stopTimer(0);
 			isTimerStarted = false;
 		}
-		
 		
 		// update lastACKNum
 		lastACKNum = cumulativeACK;
@@ -192,9 +204,11 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		}
 		
 		Packet nextPacket = senderBuffer.getFirst();
-		toLayer3(0, new Packet(nextPacket));
-		startTimer(0, retransmitInterval);
 		
+		toLayer3(0, new Packet(nextPacket));
+		retransmissionsByA++;	// statistics
+		
+		startTimer(0, retransmitInterval);
 	}
 
 
@@ -208,7 +222,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	}
 
 	/**
-	 * Author: Xueyan Xia
 	 * This routine will be called whenever a packet sent from the A-side
 	 * (i.e., as a result of a tolayer3()being done by an A-side procedure)
 	 * arrives at the B-side. packet is the (possibly corrupted) packet sent
@@ -220,25 +233,25 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		}
 		
 		if ( getChecksumOfPacket(packet) != packet.getChecksum() ) {
-			if ( traceLevel > 0 ) {
+			if ( traceLevel > 3 ) {
 				System.out.println("bInput ignores the corrupted packet.");
 			}
 			return ;
 		}
 		
-		
+		// the packet that B just received
 		int seqNum = packet.getSeqnum();
-		
+		// the base sequence number in the receiver window
 		int baseSeqNum = receiverBuffer.getCurrentBaseSeqNum();
 		
-		
+		// if the sequence number is in [rcv_base, rcv_base + N - 1]
 		if ( (seqNum >= baseSeqNum && seqNum < baseSeqNum + windowSize) ||
 			 (seqNum < baseSeqNum 
 				&& baseSeqNum + windowSize > limitSeqNo 
 				&& seqNum < (baseSeqNum + windowSize) % limitSeqNo ) 
 		) {
-			System.out.println("In receive window");
-			System.out.println("SeqNum: " + seqNum + " " + "baseSeq: " + baseSeqNum);
+			
+			
 			// buffer this packet
 			if ( seqNum >= baseSeqNum ) {
 				receiverBuffer.insert(new Packet(packet), seqNum - baseSeqNum);
@@ -246,31 +259,42 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			else {
 				receiverBuffer.insert(new Packet(packet), (seqNum + 1 + limitSeqNo - 1 - baseSeqNum));
 			}
-			System.out.println(receiverBuffer);
+			
+			if ( traceLevel > 3 ) {
+				System.out.println("seqNum is in [rcv_base, rcv_base + N - 1]");
+				System.out.println("SeqNum: " + seqNum + " " + "baseSeq: " + baseSeqNum);
+				System.out.println("Reveive window: ");
+				System.out.println(receiverBuffer);
+			}
 			
 			// slide the window and deliver the in-order packets to layer 5
 			if ( seqNum ==  baseSeqNum ) {
-				
 				int index = 0;
 				Packet nextPacket = receiverBuffer.getByIndex(index);
 				while ( nextPacket != null ) {
-					// System.out.println("do while nextPacket: " + nextPacket);
 					if (seqNum + index == limitSeqNo - 1) {
-						// send cumulative ACK
+						// send cumulative ACK when we hit the limit sequence number
 						Packet ackPacket = new Packet(0, seqNum + index, 0);
 						ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
 						toLayer3(1, ackPacket);
 					}
+					// deliver in-order packets to layer 5
 					toLayer5(nextPacket.getPayload());
+					
 					index++;
 					nextPacket = receiverBuffer.getByIndex(index);
 				}
-	
-				// delete the packet
+
+				// delete the packets which have been delivered to layer 5
 				receiverBuffer.slide(index);
+				// update the receive window base sequence number
 				receiverBuffer.setCurrentBaseSeqNum((baseSeqNum + index) % limitSeqNo);
-				System.out.println("Receive window after slide: ");
-				System.out.println(receiverBuffer);
+				
+				if ( traceLevel > 3 ) {
+					System.out.println("Receive window after slide: ");
+					System.out.println(receiverBuffer);
+				}
+				
 				// send cumulative ACK
 				Packet ackPacket = new Packet(0, (seqNum + index - 1) % limitSeqNo, 0);
 				ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
@@ -282,14 +306,16 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		// if the sequence number in [rcv_base - N, rcv_base - 1]
 		// then generate the ACK
 		else {
-			System.out.println("Generate the ACK again.");
+			if ( traceLevel > 3 ) {
+				System.out.println("Generate the ACK again.");
+			}
+			
 			Packet ackPacket = new Packet(0, seqNum, 0);
 			ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
 			toLayer3(1, ackPacket);
 		}
 		
 		// ignore other packets
-		
 	}
 
 
@@ -306,8 +332,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		int nLost = getNLost();
 		int nCorrupt = getNCorrupt();
 		
-		/** ratio of lost packets 
-		 * */
+		/** ratio of lost packets */
 		double lostRatio = (retransmissionsByA - nCorrupt) / 
 				(double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
 		lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
@@ -317,6 +342,20 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 				(double)((totalPacketsTransmittedByA + retransmissionsByA) 
 						+ ACKSentByB - (retransmissionsByA - nCorrupt));
 		corruptedRatio = Math.round(corruptedRatio * 100 * 100) * 0.01;
+		
+		/**
+		 * Average RTT: 
+		 * Average time to send a packet and receive its ACK for a packet 
+		 * that has not been retransmitted. 
+		 * Note that data packets that are ACKed by the 
+		 * ACK of a subsequent packet are not part of this metric
+		 * */
+		
+		/**
+		 * Average communication time: 
+		 * Average time between sending an original data packet 
+		 * and receiving its ACK, even if the data packet is retransmitted.
+		 * */
 		
 		/**
 		 * TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES. 
@@ -336,13 +375,15 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		System.out.println("==================================================");
 
 		// PRINT YOUR OWN STATISTIC HERE TO CHECK THE CORRECTNESS OF YOUR PROGRAM
-		System.out.println(lineBreaker + "EXTRA:");
-		System.out.println("===============CUSTOM STATISTICS==================");
-		System.out.println("Total packets transmitted by A: " + totalPacketsTransmittedByA);
-		System.out.println("Number of lost packets: " + nLost);
-		System.out.println("==================================================");
 		// EXAMPLE GIVEN BELOW
 		// System.out.println("Example statistic you want to check e.g. number of ACK
 		// packets received by A :" + "<YourVariableHere>");
+		System.out.println(lineBreaker + "EXTRA:");
+		System.out.println("===============CUSTOM STATISTICS==================");
+		System.out.println("Total packets transmitted by A: " + totalPacketsTransmittedByA);
+		System.out.println("In child simulator number of original packets: " + originalPacketsTransmittedByA);
+		System.out.println("Number of lost packets: " + nLost);
+		System.out.println("==================================================");
+
 	}
 }
