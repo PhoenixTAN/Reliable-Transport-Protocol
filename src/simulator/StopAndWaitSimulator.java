@@ -189,10 +189,9 @@ public class StopAndWaitSimulator extends NetworkSimulator {
 					packet = new Packet(senderSequenceNumber, 0, 0, new String(message.getData()));
 					long checksum = getChecksumOfPacket(packet);
 					packet.setChecksum(checksum);
+					// then buffer the new message
+					senderBuffer.add(new Packet(packet));
 				}
-
-				// then buffer the new message
-				senderBuffer.add(new Packet(packet));
 
 				toLayer3(0, packet);	// udt_send(packet)
 				startTimer(0, retransmitInterval);

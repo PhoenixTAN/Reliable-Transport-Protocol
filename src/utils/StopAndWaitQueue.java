@@ -28,11 +28,6 @@ public class StopAndWaitQueue<T> implements SlidingWindowQueue<T> {
 	}
 	
 	@Override
-	public T getDatabyIndex(int seqNum) {
-		return buffer.get(seqNum);
-	}
-	
-	@Override
 	public boolean isWindowFull() {
 		if ( tail % windowSize == 0 ) {
 			return true;
@@ -51,12 +46,16 @@ public class StopAndWaitQueue<T> implements SlidingWindowQueue<T> {
 	@Override
 	public void add(T t) {
 		buffer.add(t);
-		tail++;
+		// TODO 
+		// tail = Math.min(windowSize, buffer.size());
+//		if ( !isWindowFull() ) {
+//			tail++;
+//		}
 	}
 	
 	@Override
 	public T getFirst() {
-		if ( buffer.size() < 1 ) {
+		if ( buffer.isEmpty() ) {
 			return null;
 		}
 		return buffer.get(0);
@@ -65,7 +64,7 @@ public class StopAndWaitQueue<T> implements SlidingWindowQueue<T> {
 
 	@Override
 	public T removeFirst() {
-		if(buffer.isEmpty()){
+		if(buffer.isEmpty() ){
 			return null;
 		}
 		return buffer.remove(0);
@@ -86,7 +85,7 @@ public class StopAndWaitQueue<T> implements SlidingWindowQueue<T> {
 		for ( int i = 0; i < tail; i++ ) {
 			sb.append(buffer.get(i));
 		}
-		return sb.toString() + " tail: " + tail;
+		return sb.toString() + "\ntail: " + tail;
 	}
 
 }

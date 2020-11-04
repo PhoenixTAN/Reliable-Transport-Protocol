@@ -1,5 +1,6 @@
 import java.io.*;
 
+import simulator.SelectiveRepeatSimulator;
 import simulator.StopAndWaitSimulator;
 
 /**
@@ -21,7 +22,7 @@ import simulator.StopAndWaitSimulator;
  */
 public class Project {
 	public final static void main(String[] argv) {
-		StopAndWaitSimulator simulator;
+		SelectiveRepeatSimulator simulator;
 
 		int numOfMessages = -1;
 		double loss = -1;
@@ -205,8 +206,8 @@ public class Project {
 			}
 		}
 		
-		simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
-
+		// simulator = new StopAndWaitSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
+		simulator = new SelectiveRepeatSimulator(numOfMessages, loss, corrupt, delay, trace, seed, windowsize, timeout);
 		simulator.runNumOfMessageSimulator();
 	}
 }

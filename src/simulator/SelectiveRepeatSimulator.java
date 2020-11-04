@@ -5,8 +5,9 @@ import java.util.zip.Checksum;
 
 import basic.Message;
 import basic.Packet;
-import utils.SlidingWindowQueue;
-import utils.StopAndWaitQueue;
+import utils.SelectiveRepeatReceiverQueue;
+import utils.SelectiveRepeatSenderQueue;
+
 
 /**
  * @author: Ziqi Tan
@@ -32,8 +33,10 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * They can only hold state information for A or B.
 	 * */
 	private int senderSequenceNumber;
+	private int lastACKNum;
 	
-	private SlidingWindowQueue<Packet> senderBuffer;
+	private SelectiveRepeatSenderQueue<Packet> senderBuffer;
+	private SelectiveRepeatReceiverQueue<Packet> receiverBuffer;
 	
 	/** custom statistics */
 	private int retransmissionsByA;
@@ -76,7 +79,8 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * */
 	protected void aInit() {
 		senderSequenceNumber = FirstSeqNo;
-		senderBuffer = new StopAndWaitQueue<Packet>(windowSize);
+		lastACKNum = -1;
+		senderBuffer = new SelectiveRepeatSenderQueue<Packet>(windowSize);
 	}
 
 	/**
@@ -90,15 +94,38 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			System.out.println("Calling aOutput()...");
 		}
 		
-		
-		
-		
+		Packet packet = new Packet(senderSequenceNumber, 0, 0, message.getData());
+		packet.setChecksum(getChecksumOfPacket(packet));
 
+		senderBuffer.add(packet);
+		System.out.println(senderBuffer);
+		
+		// update sequence number
+		senderSequenceNumber = (senderSequenceNumber + 1) % limitSeqNo;
+		
+		boolean prepareTimer = false;
+		if ( senderBuffer.hasNextToSend() ) {
+			prepareTimer = true;
+		}
+		
+		// send all available packet
+		Packet nextPacket = null;
+		while ( senderBuffer.hasNextToSend() ) {
+			nextPacket = senderBuffer.getNextToSend();
+			toLayer3(0, new Packet(nextPacket));
+		}
+		
+		// be careful the timer
+		if ( prepareTimer ) {
+			stopTimer(0);
+			startTimer(0, retransmitInterval);
+		}
+		
 	}
 
 	/**
 	 * This routine will be called whenever a packet sent from the B-side
-	 * (i.e., as a result of a tolayer3()being done by a B-side procedure)
+	 * (i.e., as a result of a tolayer3() being done by a B-side procedure)
 	 * arrives at the A-side. packet is the (possibly corrupted) packet sent
 	 * from the B-side.
 	 * */
@@ -107,10 +134,41 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			System.out.println("Calling aInput()...");
 		}
 		
-		int ackNum = packet.getAcknum();
-		long checksum = packet.getChecksum();
+		// if the packet corrupts, discard it
+		if ( getChecksumOfPacket(packet) != packet.getChecksum() ) {
+			if ( traceLevel > 0 ) {
+				System.out.println("ACK from B is corrupted!");
+			}
+			return ;
+		}
+		System.out.println(senderBuffer);
+		int cumulativeACK = packet.getAcknum();
+		Packet nextPacket = senderBuffer.getFirst();
+		// be careful if the sender buffer is empty
+		if (nextPacket == null) {
+			return ;
+		}
+		int baseNum = nextPacket.getSeqnum();
 		
+		// duplicate ACK
+		if ( cumulativeACK == lastACKNum ) {
+			// retransmit only the next missing unACK'ed packet
+			System.out.println("duplicate ACK");
+			toLayer3(0, new Packet(nextPacket));
+			// restart timer
+			stopTimer(0);
+			startTimer(0, retransmitInterval);
+			
+			return ;
+		}
 		
+		// cumulative ACK
+		senderBuffer.slide(cumulativeACK, baseNum);
+		// do we need to restart timer here?
+		stopTimer(0);
+		
+		// update lastACKNum
+		lastACKNum = cumulativeACK;
 
 	}
 
@@ -124,6 +182,10 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			System.out.println("Calling aTimerInterrupt()...");
 		}
 		
+		Packet nextPacket = senderBuffer.getFirst();
+		toLayer3(0, new Packet(nextPacket));
+		stopTimer(0);
+		startTimer(0, retransmitInterval);
 		
 	}
 
@@ -134,7 +196,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * It can be used to do any required initialization.
 	 * */
 	protected void bInit() {
-		
+		receiverBuffer = new SelectiveRepeatReceiverQueue<Packet>(windowSize);
 	}
 
 	/**
@@ -145,10 +207,77 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	 * from the A-side.
 	 * */
 	protected void bInput(Packet packet) {
+		if ( traceLevel > 0 ) {
+			System.out.println("Calling bInput()...");
+		}
 		
-		System.out.println("Calling bInput()...");
+		if ( getChecksumOfPacket(packet) != packet.getChecksum() ) {
+			if ( traceLevel > 0 ) {
+				System.out.println("bInput ignores the corrupted packet.");
+			}
+			return ;
+		}
+		
+		
 		int seqNum = packet.getSeqnum();
-		long checksum = packet.getChecksum();
+		
+		int baseSeqNum = receiverBuffer.getCurrentBaseSeqNum();
+		
+		
+		if ( (seqNum >= baseSeqNum && seqNum < baseSeqNum + windowSize) ||
+			 (seqNum < baseSeqNum 
+				&& baseSeqNum + windowSize > limitSeqNo 
+				&& seqNum < (baseSeqNum + windowSize) % limitSeqNo ) 
+		) {
+			System.out.println("In receive window");
+			System.out.println("SeqNum: " + seqNum + " " + "baseSeq: " + baseSeqNum);
+			// buffer this packet
+			if ( seqNum >= baseSeqNum ) {
+				receiverBuffer.insert(new Packet(packet), seqNum - baseSeqNum);
+			}
+			else {
+				receiverBuffer.insert(new Packet(packet), (seqNum + 1 + limitSeqNo - 1 - baseSeqNum));
+			}
+			
+			// slide the window and deliver the in-order packets to layer 5
+			if ( seqNum ==  baseSeqNum ) {
+				System.out.println(receiverBuffer);
+
+				int index = 0;
+				Packet nextPacket = receiverBuffer.getByIndex(index);
+				while ( nextPacket != null ) {
+					// System.out.println("do while nextPacket: " + nextPacket);
+					if (seqNum + index == limitSeqNo - 1) {
+						// send cumulative ACK
+						Packet ackPacket = new Packet(0, seqNum + index, 0);
+						ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
+						toLayer3(1, ackPacket);
+					}
+					toLayer5(nextPacket.getPayload());
+					index++;
+					nextPacket = receiverBuffer.getByIndex(index);
+				}
+	
+				// delete the packet
+				receiverBuffer.slide(index-1);
+				
+				// send cumulative ACK
+				Packet ackPacket = new Packet(0, (seqNum + index - 1) % limitSeqNo, 0);
+				ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
+				toLayer3(1, ackPacket);
+				
+				return ;
+			}
+		}
+		// if the sequence number in [rcv_base - N, rcv_base - 1]
+		// then generate the ACK
+		else {
+			Packet ackPacket = new Packet(0, seqNum, 0);
+			ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
+			toLayer3(1, ackPacket);
+		}
+		
+		// ignore other packets
 		
 		
 	}
@@ -175,10 +304,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		/**
 		 * Ratio of corrupted packets:
-		 * Corruption ratio = 
-		 * 			(corrupted packets) / 
-		 * 			( (original packets by A + retransmissions by A) + ACK packets by B - 
-		 * 			(retransmissions by A ¨C corrupted packets) )
 		 * */
 		double corruptedRatio = nCorrupt / 
 				(double)((totalPacketsTransmittedByA + retransmissionsByA) 

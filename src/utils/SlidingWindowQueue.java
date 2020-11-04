@@ -6,7 +6,6 @@ package utils;
 
 public interface SlidingWindowQueue<T> {
 	
-	public T getDatabyIndex(int seqNum);
 	public boolean isWindowFull();
 	public boolean isWindowEmpty();
 	public void add(T t);
