@@ -68,7 +68,7 @@ public abstract class NetworkSimulator {
 
 	protected abstract void aInput(Packet packet);
 
-	protected abstract void aTimerInterrupt();
+	protected abstract void aTimerInterrupt() throws InterruptedException;
 
 	protected abstract void aInit();
 
@@ -111,7 +111,7 @@ public abstract class NetworkSimulator {
 	/**
 	 * This method will be ran by the simulator
 	 * */
-	public void runNumOfMessageSimulator() {
+	public void runNumOfMessageSimulator() throws InterruptedException {
 		Event next;
 
 		// Perform any student-required initialization

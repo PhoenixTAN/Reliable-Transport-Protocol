@@ -2,7 +2,6 @@ import java.io.*;
 
 import simulator.*;
 
-
 /**
  * @author CS-655
  * @description 
@@ -21,7 +20,7 @@ import simulator.*;
  * 		Finally, new a StudentNetworkSimulator and run it. 
  */
 public class Project {
-	public final static void main(String[] argv) {
+	public final static void main(String[] argv) throws InterruptedException {
 		NetworkSimulator simulator;
 
 		int numOfMessages = -1;

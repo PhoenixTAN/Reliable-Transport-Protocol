@@ -3,6 +3,7 @@ bbbbbbbbbbbbbbbbbbbb
 cccccccccccccccccccc
 dddddddddddddddddddd
 eeeeeeeeeeeeeeeeeeee
+<<<<<<< Updated upstream
 ffffffffffffffffffff
 gggggggggggggggggggg
 hhhhhhhhhhhhhhhhhhhh
@@ -24,3 +25,5 @@ wwwwwwwwwwwwwwwwwwww
 xxxxxxxxxxxxxxxxxxxx
 yyyyyyyyyyyyyyyyyyyy
 zzzzzzzzzzzzzzzzzzzz
+=======
+>>>>>>> Stashed changes

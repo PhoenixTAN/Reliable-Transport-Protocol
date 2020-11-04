@@ -2,12 +2,12 @@ package simulator;
 
 import basic.Message;
 import basic.Packet;
-import utils.GoBackNQueue;
+import utils.GoBackNReceiverQueue;
+import utils.GoBackNSenderQueue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -112,8 +112,8 @@ public class GoBackNSimulator extends NetworkSimulator {
      *      state information for A or B.
      */
     public static final int ReceiverBufferSize = 5;
-    private GoBackNQueue<Packet> senderQueue;
-    private GoBackNQueue<Packet> receiverQueue;
+    private GoBackNSenderQueue<Packet> senderQueue;
+    private GoBackNReceiverQueue<Packet> receiverQueue;
     /** custom statistics */
     private int retransmissionsByA;
 
@@ -174,9 +174,9 @@ public class GoBackNSimulator extends NetworkSimulator {
         int senderTailSeqNum = 0;
         int packetSeqNum = 0;
 
-        Packet tailPacket = senderQueue.getTail();
+        Packet tailPacket = senderQueue.getTailData();
         if(tailPacket != null){
-            senderTailSeqNum = senderQueue.getTail().getSeqnum();
+            senderTailSeqNum = senderQueue.getTailData().getSeqnum();
             packetSeqNum = (senderTailSeqNum + 1) < limitSeqNo ? (senderTailSeqNum + 1) : 0;
         }else{
             packetSeqNum = senderQueue.getCurSeqNum();
@@ -193,7 +193,8 @@ public class GoBackNSimulator extends NetworkSimulator {
         int senderCurSeqNum = senderQueue.getCurSeqNum();
         int baseSeqNum = senderQueue.getFirst().getSeqnum();
         if (senderCurSeqNum < baseSeqNum + windowSize) {
-            Packet packet = senderQueue.getDatabyIndex(senderCurSeqNum - baseSeqNum);
+
+            Packet packet = getPacketBySeqNum(senderQueue, senderCurSeqNum);
             if (packet == null){
                 System.out.println("aOutput Exception: want to send a packet but there are no packets");
             }
@@ -207,6 +208,16 @@ public class GoBackNSimulator extends NetworkSimulator {
         if (traceLevel > 2) {
             System.out.println("[A] Next packet seq = " + senderCurSeqNum);
         }
+    }
+
+    private Packet getPacketBySeqNum(GoBackNSenderQueue<Packet> senderQueue, int senderCurSeqNum) {
+        for(int i = 0; i < senderQueue.getTailIndex(); i++){
+            Packet packet = senderQueue.getDatabyIndex(i);
+            if(packet.getSeqnum() == senderCurSeqNum){
+                return packet;
+            }
+        }
+        return null;
     }
 
     /**
@@ -233,17 +244,15 @@ public class GoBackNSimulator extends NetworkSimulator {
                 }
                 List<Integer> sACK = packet.getsACK();
                 // retransmission
-                int baseSeqNum = senderQueue.getFirst().getSeqnum();
-                int tailSeqNum = senderQueue.getTail().getSeqnum();
+                int baseIndex = 0;
+                int tailIndex = senderQueue.getTailIndex();
 
-                int j = 0;
-                for(int i = baseSeqNum; i <= tailSeqNum; i++){
-                    if(i < sACK.get(j)){ // baseSeqNum < SACKSeqNum
+                for(int i = baseIndex; i < tailIndex; i++){
+                    Packet reTransPacket = senderQueue.getDatabyIndex(i);
+                    int seqNum = reTransPacket.getSeqnum();
+                    if(!findPacketInSACK(seqNum, sACK)){ // baseSeqNum < SACKSeqNum
                         // resend i
-                        Packet reTransPacket = senderQueue.getDatabyIndex(i - baseSeqNum);
                         toLayer3(0, reTransPacket);
-                    }else{
-                        j++;
                     }
                 }
             }else{
@@ -251,28 +260,29 @@ public class GoBackNSimulator extends NetworkSimulator {
                     System.out.println("[A] Cumulative ACK received, ackSeqNum = " + ackSeqNum);
                 }
                 // ackSeqNum is in the range of [base, cur)
-
-                int baseSeqNum = 0;
-                if(!senderQueue.isWindowEmpty()){
-                    baseSeqNum = senderQueue.getFirst().getSeqnum();
+                if(senderQueue.isWindowEmpty()){
+                    return;
                 }
+
+                int baseSeqNum = senderQueue.getFirst().getSeqnum();
                 int curSeqNum = senderQueue.getCurSeqNum();
 
                 if (traceLevel > 2) {
                     System.out.println("[A] baseSeqNum = " + baseSeqNum + ", ackSeqNum = " + ackSeqNum + ", curSeqNum = " + curSeqNum);
                 }
 
-                if(ackSeqNum >= baseSeqNum && ackSeqNum < curSeqNum){
+                if(ackSeqNum >= baseSeqNum){
                     senderQueue.slide(ackSeqNum, baseSeqNum);
                     curSeqNum = senderQueue.getCurSeqNum();
                     if (traceLevel > 2) {
                         System.out.println("[A] Sliding Window");
                     }
                     // if base == nextSeqNum, stop the timer
-                    baseSeqNum = ackSeqNum + 1;
-                    if(baseSeqNum == curSeqNum){
-                        stopTimer(0);
-                    }
+//                    baseSeqNum = ackSeqNum + 1;
+//                    if(baseSeqNum == curSeqNum || baseSeqNum == windowSize){
+//
+//                    }
+                    stopTimer(0);
                 }
                 // else, it may be a duplicate or a out of date ACK, do nothing
 
@@ -289,14 +299,24 @@ public class GoBackNSimulator extends NetworkSimulator {
         }
     }
 
+    private boolean findPacketInSACK(int seqNum, List<Integer> sACK) {
+        for(int i = 0; i < sACK.size(); i++){
+            int deliveredSeqNum = sACK.get(i);
+            if(seqNum == deliveredSeqNum){
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      *  This routine will be called when A's timer expires (thus generating a
      *      timer interrupt). You'll probably want to use this routine to control
      *      the retransmission of packets. See startTimer() and stopTimer(), above,
      *      for how the timer is started and stopped.
      */
-    protected void aTimerInterrupt() {
-
+    protected void aTimerInterrupt() throws InterruptedException {
+        // Thread.sleep(1000);
         if ( traceLevel > 0 ) {
             System.out.println("Calling aTimerInterrupt()...");
         }
@@ -305,17 +325,23 @@ public class GoBackNSimulator extends NetworkSimulator {
 
         int senderTailSeqNum = 0;
         if(!senderQueue.isWindowEmpty()){
-            senderTailSeqNum = senderQueue.getTail().getSeqnum();
+            senderTailSeqNum = senderQueue.getTailData().getSeqnum();
         }
         int senderBaseSeqNum = senderQueue.getFirst().getSeqnum();
         int i = 0;
-        while(senderBaseSeqNum <= senderTailSeqNum){
-            Packet packet = senderQueue.getDatabyIndex(i);
+        if ( traceLevel > 2 ) {
+            System.out.println("senderBaseSeqNum = " + senderBaseSeqNum + ", senderTailSeqNum = " + senderTailSeqNum);
+        }
+        while(i < senderQueue.getTailIndex()){
+            Packet packet = senderQueue.getDatabyIndex(i);  // a packet may be lost
             toLayer3(0, packet);
-            senderBaseSeqNum++;
+            if ( traceLevel > 2 ) {
+                System.out.println("[A] Resend packet: " + packet);
+            }
             i++;
         }
     }
+
 
     /**
      * This routine will be called once, before any of your other A-side
@@ -324,7 +350,7 @@ public class GoBackNSimulator extends NetworkSimulator {
      *      of entity A).
      */
     protected void aInit() {
-        senderQueue = new GoBackNQueue<Packet>(windowSize);
+        senderQueue = new GoBackNSenderQueue<Packet>(windowSize);
     }
 
 
@@ -342,10 +368,27 @@ public class GoBackNSimulator extends NetworkSimulator {
         }
         // if not corrupted and in order
         long checkSum = packet.getChecksum();
-        int expectedSeqNum = receiverQueue.getCurSeqNum();
+        int expectedSeqNum = receiverQueue.getExpectedSeqNum();
         int pktSeqNum = packet.getSeqnum();
 
-        if(pktSeqNum < expectedSeqNum && checkSum == getChecksumOfPacket(packet)){
+
+        if(pktSeqNum == expectedSeqNum && checkSum == getChecksumOfPacket(packet)){
+            if ( traceLevel > 2 ) {
+                System.out.println("Packet received successfully, send ACK, Seq = " + expectedSeqNum);
+            }
+            toLayer5(packet.getPayload());
+            // send ACK
+            Packet newPacket = new Packet(0, expectedSeqNum, 0);
+            newPacket.setChecksum(getChecksumOfPacket(newPacket));
+            toLayer3(1, newPacket);
+            expectedSeqNum = (expectedSeqNum + 1) == limitSeqNo ? 0 : (expectedSeqNum + 1);
+            receiverQueue.setExpectedSeqNum(expectedSeqNum);
+            receiverQueue.updateExpectedSeqArray();
+            if ( traceLevel > 2 ) {
+                System.out.println("Update expected array, " + receiverQueue.getExpectedSeqNumArray().toString());
+            }
+        }
+        else if(receiverQueue.isExpected(pktSeqNum) && checkSum == getChecksumOfPacket(packet)){
             if ( traceLevel > 2 ) {
                 System.out.println("Packet received, but duplicated, send ACK, Seq = " + pktSeqNum);
             }
@@ -354,17 +397,7 @@ public class GoBackNSimulator extends NetworkSimulator {
             newPacket.setChecksum(getChecksumOfPacket(newPacket));
             toLayer3(1, newPacket);
         }
-        else if(pktSeqNum == expectedSeqNum && checkSum == getChecksumOfPacket(packet)){
-            if ( traceLevel > 2 ) {
-                System.out.println("Packet received successfully, send ACK, Seq = " + expectedSeqNum);
-            }
-            // send ACK
-            Packet newPacket = new Packet(0, expectedSeqNum, 0);
-            newPacket.setChecksum(getChecksumOfPacket(newPacket));
-            toLayer3(1, newPacket);
-            expectedSeqNum++;
-            receiverQueue.setCurSeqNum(expectedSeqNum);
-        }else if(checkSum == getChecksumOfPacket(packet)){
+        else if(checkSum == getChecksumOfPacket(packet)){
             if ( traceLevel > 2 ) {
                 System.out.println("Packet received, but out of order, buffed packet, expectedSeq = " + expectedSeqNum + ", but packetSeq = " + pktSeqNum );
             }
@@ -373,7 +406,9 @@ public class GoBackNSimulator extends NetworkSimulator {
             // if SACK array is FULL
             if(receiverQueue.isBufferFull()){
                 // send a SACK packet
-                Packet newPacket = new Packet(0, expectedSeqNum - 1, 0);
+                Packet newPacket = new Packet(0, 0, 0);
+                int newSeqNum = (expectedSeqNum == 0) ? (limitSeqNo - 1): (expectedSeqNum - 1);
+                newPacket.setSeqnum(newSeqNum);
                 newPacket.setFlag(true);
                 List<Integer> SACK = new ArrayList<>();
                 for(int i = 0; i < ReceiverBufferSize; i++){
@@ -399,7 +434,7 @@ public class GoBackNSimulator extends NetworkSimulator {
      *      of entity B).
      */
     protected void bInit() {
-        receiverQueue = new GoBackNQueue<Packet>(windowSize);
+        receiverQueue = new GoBackNReceiverQueue<Packet>(windowSize);
     }
 
     // Use to print final statistics
