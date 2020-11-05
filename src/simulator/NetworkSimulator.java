@@ -62,6 +62,8 @@ public abstract class NetworkSimulator {
 	private int nToLayer5;
 	private int packetsTransmittedByA;
 	private int ACKSentByB;
+	private int ACorrupt;
+	private int BCorrupt;
 	
 	
 	protected abstract void aOutput(Message message);
@@ -106,6 +108,8 @@ public abstract class NetworkSimulator {
 		nToLayer5 = 0;
 		packetsTransmittedByA = 0;
 		ACKSentByB = 0;
+		ACorrupt = 0;
+		BCorrupt = 0;
 	}
 
 	/**
@@ -325,6 +329,12 @@ public abstract class NetworkSimulator {
 		// Simulate corruption
 		if (rand.nextDouble(3) < corruptProb) {
 			nCorrupt++;
+			
+			if (callingEntity == A) {
+				ACorrupt++;
+			} else if (callingEntity == B) {
+				BCorrupt++;
+			}
 
 			if (traceLevel > 0) {
 				System.out.println("toLayer3: packet being corrupted");
@@ -408,6 +418,22 @@ public abstract class NetworkSimulator {
 	
 	protected int getACKSentByB() {
 		return ACKSentByB;
+	}
+
+	public int getACorrupt() {
+		return ACorrupt;
+	}
+
+	public void setACorrupt(int aCorrupt) {
+		ACorrupt = aCorrupt;
+	}
+
+	public int getBCorrupt() {
+		return BCorrupt;
+	}
+
+	public void setBCorrupt(int bCorrupt) {
+		BCorrupt = bCorrupt;
 	}
 
 }

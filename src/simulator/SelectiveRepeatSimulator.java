@@ -197,6 +197,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		// statistic for average RTT and communication time
 		if ( !packet.isRetransmitted() ) {
 			accumulativeRTT += getTime() - packet.getSendTime();
+			// System.out.println(getTime() + "     " + packet.getSendTime());
 			totalNumOfPacketsForRTT++;
 		}
 		accumulativeCommunicationEndTime += getTime() * (cumulativeACK - baseNum + 1);
@@ -385,14 +386,14 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		int nCorrupt = getNCorrupt();
 		
 		/** ratio of lost packets */
-		double lostRatio = (retransmissionsByA - nCorrupt) / 
+		double lostRatio = (retransmissionsByA - getACorrupt()) / 
 				(double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
 		lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
 		
 		/** Ratio of corrupted packets */
-		double corruptedRatio = nCorrupt / 
+		double corruptedRatio = getACorrupt() / 
 				(double)((totalPacketsTransmittedByA + retransmissionsByA) 
-						+ ACKSentByB - (retransmissionsByA - nCorrupt));
+						+ ACKSentByB - (retransmissionsByA - getACorrupt()));
 		corruptedRatio = Math.round(corruptedRatio * 100 * 100) * 0.01;
 		
 		/**
@@ -422,6 +423,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		System.out.println("Number of data packets delivered to layer 5 at B: " + nToLayer5);
 		System.out.println("Number of ACK packets sent by B: " + ACKSentByB);
 		System.out.println("Number of corrupted packets: " + nCorrupt);
+		System.out.println("Number of A corrupted packets: " + getACorrupt());
 		System.out.println("Ratio of lost packets: " + String.format("%.2f", lostRatio) + "%");
 		System.out.println("Ratio of corrupted packets: " + String.format("%.2f", corruptedRatio) + "%");
 		System.out.println("Average RTT: " + String.format("%.3f", averageRTT));
@@ -438,6 +440,8 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		System.out.println("Original packets transmitted by A: " + originalPacketsTransmittedByA);
 		System.out.println("Total number of packets accounts for RTT: " + totalNumOfPacketsForRTT);
 		System.out.println("Number of lost packets: " + nLost);
+		System.out.println("A corrupt: " + getACorrupt());
+		System.out.println("B corrupt: " + getBCorrupt());
 		System.out.println("==================================================");
 
 	}
