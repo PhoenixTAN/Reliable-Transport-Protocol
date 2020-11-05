@@ -399,16 +399,18 @@ public class GoBackNSimulator extends NetworkSimulator {
                 System.out.println("Packet received successfully, send ACK, Seq = " + expectedSeqNum);
             }
             toLayer5(packet.getPayload());
-            int i = 0;
+            receiverQueue.updateExpectedSeqArray();
+            int i = 1; pktSeqNum++;
 
             if(!receiverQueue.isWindowEmpty()){
                 Packet pkt = receiverQueue.getDatabyIndex(i);
-                while(pkt != null && pkt.getSeqnum() == pktSeqNum + 1){
+                while(pkt != null && pkt.getSeqnum() == pktSeqNum){
                     toLayer5(pkt.getPayload());
                     receiverQueue.removeFirst();
                     i++;
                     pktSeqNum++;
                     pkt = receiverQueue.getDatabyIndex(i);
+                    receiverQueue.updateExpectedSeqArray();
                 }
             }
             // send ACK
@@ -417,14 +419,14 @@ public class GoBackNSimulator extends NetworkSimulator {
             newPacket.setSendTime(packet.getSendTime());
             newPacket.setRetransmitted(packet.isRetransmitted());
             toLayer3(1, new Packet(newPacket));
-            expectedSeqNum = (expectedSeqNum + 1) == limitSeqNo ? 0 : (expectedSeqNum + 1);
+            expectedSeqNum = pktSeqNum == limitSeqNo ? 0 : pktSeqNum;
             receiverQueue.setExpectedSeqNum(expectedSeqNum);
-            receiverQueue.updateExpectedSeqArray();
+           // receiverQueue.updateExpectedSeqArray();
             if ( traceLevel > 2 ) {
                 System.out.println("Update expected array, " + receiverQueue.getExpectedSeqNumArray().toString());
             }
         }
-        else if(receiverQueue.isExpected(pktSeqNum) && checkSum == getChecksumOfPacket(packet)){
+        else if(!receiverQueue.isExpected(pktSeqNum) && checkSum == getChecksumOfPacket(packet)){
             if ( traceLevel > 2 ) {
                 System.out.println("Packet received, but duplicated, send ACK, Seq = " + pktSeqNum);
             }
