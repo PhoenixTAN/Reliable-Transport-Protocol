@@ -116,6 +116,8 @@ public class GoBackNSimulator extends NetworkSimulator {
     private GoBackNReceiverQueue<Packet> receiverQueue;
     /** custom statistics */
     private int retransmissionsByA;
+    private double RTTSumTime;
+    private double communicationSumTime;
 
     /**
      * Also add any necessary methods (e.g. checksum of a String)
@@ -159,6 +161,9 @@ public class GoBackNSimulator extends NetworkSimulator {
          *  custom statistics
          */
         retransmissionsByA = 0;
+
+        RTTSumTime = 0;
+        communicationSumTime = 0;
     }
 
     /** This routine will be called whenever the upper layer at the sender [A]
@@ -253,6 +258,7 @@ public class GoBackNSimulator extends NetworkSimulator {
                     if(!findPacketInSACK(seqNum, sACK)){ // baseSeqNum < SACKSeqNum
                         // resend i
                         toLayer3(0, reTransPacket);
+                        retransmissionsByA++;
                     }
                 }
             }else{
@@ -334,6 +340,7 @@ public class GoBackNSimulator extends NetworkSimulator {
         }
         while(i < senderQueue.getTailIndex()){
             Packet packet = senderQueue.getDatabyIndex(i);  // a packet may be lost
+            retransmissionsByA++;
             toLayer3(0, packet);
             if ( traceLevel > 2 ) {
                 System.out.println("[A] Resend packet: " + packet);
@@ -377,6 +384,18 @@ public class GoBackNSimulator extends NetworkSimulator {
                 System.out.println("Packet received successfully, send ACK, Seq = " + expectedSeqNum);
             }
             toLayer5(packet.getPayload());
+            int i = 0;
+
+            if(!receiverQueue.isWindowEmpty()){
+                Packet pkt = receiverQueue.getDatabyIndex(i);
+                while(pkt != null && pkt.getSeqnum() == pktSeqNum + 1){
+                    toLayer5(pkt.getPayload());
+                    receiverQueue.removeFirst();
+                    i++;
+                    pktSeqNum++;
+                    pkt = receiverQueue.getDatabyIndex(i);
+                }
+            }
             // send ACK
             Packet newPacket = new Packet(0, expectedSeqNum, 0);
             newPacket.setChecksum(getChecksumOfPacket(newPacket));
@@ -439,22 +458,52 @@ public class GoBackNSimulator extends NetworkSimulator {
 
     // Use to print final statistics
     protected void Simulation_done() {
-        // TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES. DO NOT CHANGE THE FORMAT OF PRINTED OUTPUT
-        System.out.println("\n\n===============STATISTICS=======================");
-        System.out.println("Number of original packets transmitted by A:" + "<YourVariableHere>");
-        System.out.println("Number of retransmissions by A:" + "<YourVariableHere>");
-        System.out.println("Number of data packets delivered to layer 5 at B:" + "<YourVariableHere>");
-        System.out.println("Number of ACK packets sent by B:" + "<YourVariableHere>");
-        System.out.println("Number of corrupted packets:" + "<YourVariableHere>");
-        System.out.println("Ratio of lost packets:" + "<YourVariableHere>");
-        System.out.println("Ratio of corrupted packets:" + "<YourVariableHere>");
-        System.out.println("Average RTT:" + "<YourVariableHere>");
-        System.out.println("Average communication time:" + "<YourVariableHere>");
+        String lineBreaker = System.lineSeparator();
+        int originPacketsTransmittedByA = getMaxMessages();
+        int totalPacketsTransmittedByA = getPacketsTransmittedByA();
+        int nToLayer5 = getNtoLayer5();
+        int ACKSentByB = getACKSentByB();
+
+        /** total packet loss including ACK, retransmission packet and original packets */
+        int nLost = getNLost();
+        int nCorrupt = getNCorrupt();
+
+        /** ratio of lost packets
+         * */
+        double lostRatio = (retransmissionsByA - nCorrupt) /
+                (double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
+        lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
+
+        /** Ratio of corrupted packets */
+        double corruptedRatio = nCorrupt /
+                (double)((totalPacketsTransmittedByA + retransmissionsByA)
+                        + ACKSentByB - (retransmissionsByA - nCorrupt));
+        corruptedRatio = Math.round(corruptedRatio * 100 * 100) * 0.01;
+
+        /**
+         * TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES.
+         * DO NOT CHANGE THE FORMAT OF PRINTED OUTPUT
+         * */
+        System.out.println(lineBreaker);
+        System.out.println("===============STATISTICS=======================");
+        System.out.println("Number of original packets transmitted by A: " + originPacketsTransmittedByA);
+        System.out.println("Number of retransmissions by A: " + retransmissionsByA);
+        System.out.println("Number of data packets delivered to layer 5 at B: " + nToLayer5);
+        System.out.println("Number of ACK packets sent by B: " + ACKSentByB);
+        System.out.println("Number of corrupted packets: " + nCorrupt);
+        System.out.println("Ratio of lost packets: " + String.format("%.2f", lostRatio) + "%");
+        System.out.println("Ratio of corrupted packets: " + String.format("%.2f", corruptedRatio) + "%");
+        System.out.println("Average RTT: " + "<YourVariableHere>");
+        System.out.println("Average communication time: " + "<YourVariableHere>");
         System.out.println("==================================================");
 
         // PRINT YOUR OWN STATISTIC HERE TO CHECK THE CORRECTNESS OF YOUR PROGRAM
-        System.out.println("\nEXTRA:");
-        // EXAMPLE GIVEN BELOW
+        System.out.println(lineBreaker + "EXTRA:");
+        System.out.println("===============CUSTOM STATISTICS==================");
+        System.out.println("Total packets transmitted by A: " + totalPacketsTransmittedByA);
+        System.out.println("Number of lost packets: " + nLost);
+        System.out.println("==================================================");
+
         //System.out.println("Example statistic you want to check e.g. number of ACK packets received by A :" + "<YourVariableHere>");
     }
 

@@ -31,6 +31,9 @@ public class GoBackNSenderQueue<T> implements SlidingWindowQueue<T>  {
     }
 
     public T getDatabyIndex(int index) {
+        if(index >= buffer.size()){
+            return null;
+        }
         return buffer.get(index);
     }
 
