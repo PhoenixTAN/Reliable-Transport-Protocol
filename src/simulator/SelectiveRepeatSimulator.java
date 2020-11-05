@@ -86,6 +86,9 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		/** initialize custom statistics */
 		retransmissionsByA = 0;
 		originalPacketsTransmittedByA = 0;
+		accumulativeRTT = 0;
+		totalNumOfPackets = 0;
+		accumulativeCommunicationTime = 0;
 	}
 
 	/**
