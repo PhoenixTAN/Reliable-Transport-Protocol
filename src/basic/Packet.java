@@ -47,6 +47,8 @@ public class Packet {
 			payload = new String(newPayload);
 		}
 		sACK = new ArrayList<>();
+		sendTime = 0;
+		isRetransmitted = false;
 	}
 
 	public Packet(int seq, int ack, long check) {
@@ -55,6 +57,8 @@ public class Packet {
 		checksum = check;
 		payload = "";
 		sACK = new ArrayList<>();
+		sendTime = 0;
+		isRetransmitted = false;
 	}
 
 	public boolean setSeqnum(int n) {
