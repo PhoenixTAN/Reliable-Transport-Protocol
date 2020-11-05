@@ -11,6 +11,9 @@ import java.util.List;
  */
 public class Packet {
 	
+	private double sendTime;
+	private boolean isRetransmitted;
+	
 	private int seqnum;
 	private int acknum;
 	private long checksum;		/** modified by Ziqi Tan */
@@ -91,7 +94,7 @@ public class Packet {
 	public String getPayload() {
 		return payload;
 	}
-
+	
 	public String toString() {
 		return ("seqnum: " + seqnum + "  acknum: " + acknum + "  checksum: " + checksum + "  payload: " + payload);
 	}
@@ -110,5 +113,21 @@ public class Packet {
 
 	public void setsACK(List<Integer> sACK) {
 		this.sACK = sACK;
+	}
+
+	public double getSendTime() {
+		return sendTime;
+	}
+
+	public void setSendTime(double sendTime) {
+		this.sendTime = sendTime;
+	}
+
+	public boolean isRetransmitted() {
+		return isRetransmitted;
+	}
+
+	public void setRetransmitted(boolean isRetransmitted) {
+		this.isRetransmitted = isRetransmitted;
 	}
 }

@@ -40,7 +40,12 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	/** custom statistics */
 	private int retransmissionsByA;
 	private int originalPacketsTransmittedByA;
-
+	
+	private double accumulativeRTT;
+	private int totalNumOfPackets;
+	
+	private double accumulativeCommunicationTime;
+	
 	/** Also add any necessary methods (e.g. checksum of a String) */ 
 	
 	/**
@@ -180,6 +185,8 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		// cumulative ACK
 		senderBuffer.slide(cumulativeACK, baseNum);
+
+		
 
 		// if no more packets to be ACKed
 		// then stop the timer
@@ -351,6 +358,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		 * ACK of a subsequent packet are not part of this metric
 		 * */
 		
+		
 		/**
 		 * Average communication time: 
 		 * Average time between sending an original data packet 
@@ -381,7 +389,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		System.out.println(lineBreaker + "EXTRA:");
 		System.out.println("===============CUSTOM STATISTICS==================");
 		System.out.println("Total packets transmitted by A: " + totalPacketsTransmittedByA);
-		System.out.println("In child simulator number of original packets: " + originalPacketsTransmittedByA);
+		System.out.println("Original packets transmitted by A: " + originalPacketsTransmittedByA);
 		System.out.println("Number of lost packets: " + nLost);
 		System.out.println("==================================================");
 
