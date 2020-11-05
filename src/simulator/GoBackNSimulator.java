@@ -117,10 +117,9 @@ public class GoBackNSimulator extends NetworkSimulator {
     /** custom statistics */
     private int retransmissionsByA;
     private double RTTSumTime;
-    private double communicationSumTime;
-
+    private double accumulativeCommunicationStartTime;
+    private double accumulativeCommunicationEndTime;
     private int RTTTotalPacketNum = 0;
-    private int communicationTotalPacketNum = 0;
 
     /**
      * Also add any necessary methods (e.g. checksum of a String)
@@ -164,11 +163,10 @@ public class GoBackNSimulator extends NetworkSimulator {
          *  custom statistics
          */
         retransmissionsByA = 0;
-
         RTTSumTime = 0;
-        communicationSumTime = 0;
         RTTTotalPacketNum = 0;
-        communicationTotalPacketNum = 0;
+        accumulativeCommunicationStartTime = 0;
+        accumulativeCommunicationEndTime = 0;
     }
 
     /** This routine will be called whenever the upper layer at the sender [A]
@@ -209,6 +207,7 @@ public class GoBackNSimulator extends NetworkSimulator {
                 System.out.println("aOutput Exception: want to send a packet but there are no packets");
             }
             packet.setSendTime(getTime());
+            accumulativeCommunicationStartTime += getTime();
             toLayer3(0, new Packet(packet));
             if (senderCurSeqNum == baseSeqNum){
                 startTimer(0, retransmitInterval);
@@ -248,12 +247,7 @@ public class GoBackNSimulator extends NetworkSimulator {
 
         // the packet is not corrupted
         if (checksum == getChecksumOfPacket(packet)) {
-            // statistic
-            if(!packet.isRetransmitted()){
-                RTTTotalPacketNum++;
-                RTTSumTime = getTime() - packet.getSendTime();
-            }
-            communicationSumTime = getTime() - packet.getSendTime();
+
 
             // handle SACK
             if(packet.isFlag()){
@@ -297,6 +291,13 @@ public class GoBackNSimulator extends NetworkSimulator {
                     if (traceLevel > 2) {
                         System.out.println("[A] Sliding Window");
                     }
+                    // statistic
+                    if(!packet.isRetransmitted()){
+                        RTTTotalPacketNum++;
+                        RTTSumTime += (getTime() - packet.getSendTime());
+                    }
+                    accumulativeCommunicationEndTime += getTime() * (ackSeqNum - baseSeqNum + 1);
+
                     // if base == nextSeqNum, stop the timer
 //                    baseSeqNum = ackSeqNum + 1;
 //                    if(baseSeqNum == curSeqNum || baseSeqNum == windowSize){
@@ -400,17 +401,19 @@ public class GoBackNSimulator extends NetworkSimulator {
             }
             toLayer5(packet.getPayload());
             receiverQueue.updateExpectedSeqArray();
-            int i = 1; pktSeqNum++;
+            int i = 0; pktSeqNum++;
 
             if(!receiverQueue.isWindowEmpty()){
                 Packet pkt = receiverQueue.getDatabyIndex(i);
+                System.out.println("Find buffered packet: " + pkt);
                 while(pkt != null && pkt.getSeqnum() == pktSeqNum){
                     toLayer5(pkt.getPayload());
                     receiverQueue.removeFirst();
                     i++;
-                    pktSeqNum++;
+                    pktSeqNum++;expectedSeqNum++;
                     pkt = receiverQueue.getDatabyIndex(i);
                     receiverQueue.updateExpectedSeqArray();
+                    receiverQueue.updateTail();
                 }
             }
             // send ACK
@@ -491,17 +494,33 @@ public class GoBackNSimulator extends NetworkSimulator {
         int nLost = getNLost();
         int nCorrupt = getNCorrupt();
 
-        /** ratio of lost packets
-         * */
-        double lostRatio = (retransmissionsByA - nCorrupt) /
+        /** ratio of lost packets */
+        double lostRatio = (retransmissionsByA - getACorrupt()) /
                 (double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
         lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
 
         /** Ratio of corrupted packets */
-        double corruptedRatio = nCorrupt /
+        double corruptedRatio = getACorrupt() /
                 (double)((totalPacketsTransmittedByA + retransmissionsByA)
-                        + ACKSentByB - (retransmissionsByA - nCorrupt));
+                        + ACKSentByB - (retransmissionsByA - getACorrupt()));
         corruptedRatio = Math.round(corruptedRatio * 100 * 100) * 0.01;
+
+        /**
+         * Average RTT:
+         * Average time to send a packet and receive its ACK for a packet
+         * that has not been retransmitted.
+         * Note that data packets that are ACKed by the
+         * ACK of a subsequent packet are not part of this metric
+         * */
+        double averageRTT = RTTSumTime / RTTTotalPacketNum;
+
+        /**
+         * Average communication time:
+         * Average time between sending an original data packet
+         * and receiving its ACK, even if the data packet is retransmitted.
+         * */
+        double averageCommunicationTime = (accumulativeCommunicationEndTime - accumulativeCommunicationStartTime) / originPacketsTransmittedByA;
+
 
         /**
          * TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES.
@@ -514,18 +533,23 @@ public class GoBackNSimulator extends NetworkSimulator {
         System.out.println("Number of data packets delivered to layer 5 at B: " + nToLayer5);
         System.out.println("Number of ACK packets sent by B: " + ACKSentByB);
         System.out.println("Number of corrupted packets: " + nCorrupt);
+        System.out.println("Number of A corrupted packets: " + getACorrupt());
         System.out.println("Ratio of lost packets: " + String.format("%.2f", lostRatio) + "%");
         System.out.println("Ratio of corrupted packets: " + String.format("%.2f", corruptedRatio) + "%");
-        System.out.println("Average RTT: " + RTTSumTime / RTTTotalPacketNum);
-        System.out.println("Average communication time: " + communicationSumTime / getMaxMessages());
+        System.out.println("Average RTT: " + String.format("%.3f", averageRTT));
+        System.out.println("Average communication time: " + String.format("%.3f", averageCommunicationTime));
         System.out.println("==================================================");
 
         // PRINT YOUR OWN STATISTIC HERE TO CHECK THE CORRECTNESS OF YOUR PROGRAM
         System.out.println(lineBreaker + "EXTRA:");
         System.out.println("===============CUSTOM STATISTICS==================");
         System.out.println("Total packets transmitted by A: " + totalPacketsTransmittedByA);
+        System.out.println("Total number of packets accounts for RTT: " + RTTTotalPacketNum);
         System.out.println("Number of lost packets: " + nLost);
+        System.out.println("A corrupt: " + getACorrupt());
+        System.out.println("B corrupt: " + getBCorrupt());
         System.out.println("==================================================");
+
 
         //System.out.println("Example statistic you want to check e.g. number of ACK packets received by A :" + "<YourVariableHere>");
     }

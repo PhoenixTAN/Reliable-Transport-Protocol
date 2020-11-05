@@ -131,4 +131,9 @@ public class GoBackNReceiverQueue<T> implements SlidingWindowQueue<T>  {
     public List<Integer> getExpectedSeqNumArray() {
         return expectedSeqNumArray;
     }
+
+    public void updateTail(){
+        tail = Math.min(windowSize, buffer.size());
+    }
 }
+
