@@ -26,13 +26,11 @@ public class Packet {
 		acknum = p.getAcknum();
 		checksum = p.getChecksum();
 		payload = new String(p.getPayload());
-		
 		List<Integer> _sACK = p.getsACK();
 		sACK = new ArrayList<Integer>();
 		for ( Integer sack: _sACK ) {
 			sACK.add(sack);
 		}
-		
 		sendTime = p.sendTime;
 		isRetransmitted = p.isRetransmitted;
 	}

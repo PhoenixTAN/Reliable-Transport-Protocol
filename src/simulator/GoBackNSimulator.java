@@ -119,6 +119,9 @@ public class GoBackNSimulator extends NetworkSimulator {
     private double RTTSumTime;
     private double communicationSumTime;
 
+    private int RTTTotalPacketNum = 0;
+    private int communicationTotalPacketNum = 0;
+
     /**
      * Also add any necessary methods (e.g. checksum of a String)
      */
@@ -164,6 +167,8 @@ public class GoBackNSimulator extends NetworkSimulator {
 
         RTTSumTime = 0;
         communicationSumTime = 0;
+        RTTTotalPacketNum = 0;
+        communicationTotalPacketNum = 0;
     }
 
     /** This routine will be called whenever the upper layer at the sender [A]
@@ -203,7 +208,8 @@ public class GoBackNSimulator extends NetworkSimulator {
             if (packet == null){
                 System.out.println("aOutput Exception: want to send a packet but there are no packets");
             }
-            toLayer3(0, packet);
+            packet.setSendTime(getTime());
+            toLayer3(0, new Packet(packet));
             if (senderCurSeqNum == baseSeqNum){
                 startTimer(0, retransmitInterval);
             }
@@ -242,6 +248,13 @@ public class GoBackNSimulator extends NetworkSimulator {
 
         // the packet is not corrupted
         if (checksum == getChecksumOfPacket(packet)) {
+            // statistic
+            if(!packet.isRetransmitted()){
+                RTTTotalPacketNum++;
+                RTTSumTime = getTime() - packet.getSendTime();
+            }
+            communicationSumTime = getTime() - packet.getSendTime();
+
             // handle SACK
             if(packet.isFlag()){
                 if (traceLevel > 2) {
@@ -257,7 +270,8 @@ public class GoBackNSimulator extends NetworkSimulator {
                     int seqNum = reTransPacket.getSeqnum();
                     if(!findPacketInSACK(seqNum, sACK)){ // baseSeqNum < SACKSeqNum
                         // resend i
-                        toLayer3(0, reTransPacket);
+                        reTransPacket.setRetransmitted(true);
+                        toLayer3(0, new Packet(reTransPacket));
                         retransmissionsByA++;
                     }
                 }
@@ -340,8 +354,9 @@ public class GoBackNSimulator extends NetworkSimulator {
         }
         while(i < senderQueue.getTailIndex()){
             Packet packet = senderQueue.getDatabyIndex(i);  // a packet may be lost
+            packet.setRetransmitted(true);
             retransmissionsByA++;
-            toLayer3(0, packet);
+            toLayer3(0, new Packet(packet));
             if ( traceLevel > 2 ) {
                 System.out.println("[A] Resend packet: " + packet);
             }
@@ -399,7 +414,9 @@ public class GoBackNSimulator extends NetworkSimulator {
             // send ACK
             Packet newPacket = new Packet(0, expectedSeqNum, 0);
             newPacket.setChecksum(getChecksumOfPacket(newPacket));
-            toLayer3(1, newPacket);
+            newPacket.setSendTime(packet.getSendTime());
+            newPacket.setRetransmitted(packet.isRetransmitted());
+            toLayer3(1, new Packet(newPacket));
             expectedSeqNum = (expectedSeqNum + 1) == limitSeqNo ? 0 : (expectedSeqNum + 1);
             receiverQueue.setExpectedSeqNum(expectedSeqNum);
             receiverQueue.updateExpectedSeqArray();
@@ -414,6 +431,8 @@ public class GoBackNSimulator extends NetworkSimulator {
             // send ACK
             Packet newPacket = new Packet(0, pktSeqNum, 0);
             newPacket.setChecksum(getChecksumOfPacket(newPacket));
+            newPacket.setSendTime(packet.getSendTime());
+            newPacket.setRetransmitted(packet.isRetransmitted());
             toLayer3(1, newPacket);
         }
         else if(checkSum == getChecksumOfPacket(packet)){
@@ -436,6 +455,8 @@ public class GoBackNSimulator extends NetworkSimulator {
                 }
                 newPacket.setsACK(SACK);
                 newPacket.setChecksum(getChecksumOfPacket(newPacket));
+                newPacket.setSendTime(packet.getSendTime());
+                newPacket.setRetransmitted(true);
                 toLayer3(1, newPacket);
             }
         }else{
@@ -493,8 +514,8 @@ public class GoBackNSimulator extends NetworkSimulator {
         System.out.println("Number of corrupted packets: " + nCorrupt);
         System.out.println("Ratio of lost packets: " + String.format("%.2f", lostRatio) + "%");
         System.out.println("Ratio of corrupted packets: " + String.format("%.2f", corruptedRatio) + "%");
-        System.out.println("Average RTT: " + "<YourVariableHere>");
-        System.out.println("Average communication time: " + "<YourVariableHere>");
+        System.out.println("Average RTT: " + RTTSumTime / RTTTotalPacketNum);
+        System.out.println("Average communication time: " + communicationSumTime / getMaxMessages());
         System.out.println("==================================================");
 
         // PRINT YOUR OWN STATISTIC HERE TO CHECK THE CORRECTNESS OF YOUR PROGRAM
