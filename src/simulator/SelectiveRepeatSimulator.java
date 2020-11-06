@@ -91,6 +91,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		totalNumOfPacketsForRTT = 0;
 		accumulativeCommunicationStartTime = 0;
 		accumulativeCommunicationEndTime = 0;
+
 	}
 
 	/**
@@ -130,6 +131,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			accumulativeCommunicationStartTime += getTime();
 			toLayer3(0, new Packet(nextPacket));
 			originalPacketsTransmittedByA++;	// statistics
+			System.out.println("wwwwwwwwwwwwwwwwwwwwwwwwwwwww");
 		}
 		
 		// be careful of the timer
@@ -148,6 +150,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	protected void aInput(Packet packet) {
 		if ( traceLevel > 0 ) {
 			System.out.println("Calling aInput()...");
+			// System.out.println(packet);
 		}
 		
 		// if the packet corrupts, discard it
@@ -159,6 +162,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		}
 		
 		if ( traceLevel > 3 ) {
+			System.out.println("Sender buffer: ");
 			System.out.println(senderBuffer);
 		}
 		
@@ -176,9 +180,8 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		// duplicate ACK then retransmit 
 		if ( cumulativeACK == lastACKNum ) {
-			if ( traceLevel > 3 ) {
-				System.out.println("duplicate ACK");
-			}
+			
+			System.out.println("duplicate ACK: " + cumulativeACK);
 			// retransmit only the next missing unACK'ed packet
 			nextPacket.setRetransmitted(true);
 			toLayer3(0, new Packet(nextPacket));
@@ -193,15 +196,19 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		// cumulative ACK
 		senderBuffer.slide(cumulativeACK, baseNum);
+		if ( cumulativeACK - 1 > baseNum ) {
+			System.out.println("CumulativeACK: " + cumulativeACK + " baseNum: " + baseNum);
+		}
 		
 		// statistic for average RTT and communication time
 		if ( !packet.isRetransmitted() ) {
-			accumulativeRTT += getTime() - packet.getSendTime();
-			// System.out.println(getTime() + "     " + packet.getSendTime());
+			accumulativeRTT += (getTime() - packet.getSendTime());
 			totalNumOfPacketsForRTT++;
 		}
-		accumulativeCommunicationEndTime += getTime() * (cumulativeACK - baseNum + 1);
-
+		
+		if ( cumulativeACK >= baseNum ) {
+			accumulativeCommunicationEndTime += (getTime() * (cumulativeACK - baseNum + 1));
+		}
 
 		// if no more packets to be ACKed
 		// then stop the timer
@@ -212,6 +219,30 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		// update lastACKNum
 		lastACKNum = cumulativeACK;
+		
+		// we need the following code to send the available packets
+		// if the sender still has packet to send, start the timer
+		boolean prepareTimer = false;
+		if ( senderBuffer.hasNextToSend() ) {
+			prepareTimer = true;
+		}
+		System.out.println("Here " + senderBuffer.hasNextToSend());
+		
+		// send all available packets
+		Packet nextAvailablePacket = null;
+		while ( senderBuffer.hasNextToSend() ) {
+			nextAvailablePacket = senderBuffer.getNextToSend();
+			nextAvailablePacket.setSendTime(getTime());
+			accumulativeCommunicationStartTime += getTime();
+			toLayer3(0, new Packet(nextAvailablePacket));
+			originalPacketsTransmittedByA++;	// statistics
+		}
+		
+		// be careful of the timer
+		if ( prepareTimer && !isTimerStarted ) {
+			startTimer(0, retransmitInterval);
+			isTimerStarted = true;
+		}
 
 	}
 
@@ -255,17 +286,21 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 			System.out.println("Calling bInput()...");
 		}
 		
-		if ( getChecksumOfPacket(packet) != packet.getChecksum() ) {
-			if ( traceLevel > 3 ) {
-				System.out.println("bInput ignores the corrupted packet.");
-			}
-			return ;
-		}
-		
 		// the packet that B just received
 		int seqNum = packet.getSeqnum();
 		// the base sequence number in the receiver window
 		int baseSeqNum = receiverBuffer.getCurrentBaseSeqNum();
+		
+		if ( getChecksumOfPacket(packet) != packet.getChecksum() ) {
+			if ( traceLevel > 3 ) {
+				/*System.out.println("bInput sends duplicate ACK because of corruption.");
+				Packet ackPacket = new Packet(0, seqNum - 1, 0);
+				ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
+				ackPacket.setRetransmitted(true);	// statistics
+				toLayer3(1, ackPacket);*/
+			}
+			return ;
+		}
 		
 		// if the sequence number is in [rcv_base, rcv_base + N - 1]
 		if ( (seqNum >= baseSeqNum && seqNum < baseSeqNum + windowSize) ||
@@ -273,7 +308,6 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 				&& baseSeqNum + windowSize > limitSeqNo 
 				&& seqNum < (baseSeqNum + windowSize) % limitSeqNo ) 
 		) {
-			
 			
 			// buffer this packet
 			if ( seqNum >= baseSeqNum ) {
@@ -338,19 +372,21 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 				}
 				
 				// send cumulative ACK
-				Packet ackPacket = new Packet(0, (seqNum + index - 1) % limitSeqNo, 0);
-				ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
-				
-				// statistic for average RTT
-				if ( lastPacketSendTimeForCumulativeACK == 0 ) {
-					ackPacket.setRetransmitted(true);
+				if ( seqNum + index - 1 != limitSeqNo - 1 ) {
+					Packet ackPacket = new Packet(0, (seqNum + index - 1) % limitSeqNo, 0);
+					ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
+					
+					// statistic for average RTT
+					if ( lastPacketSendTimeForCumulativeACK == 0 ) {
+						ackPacket.setRetransmitted(true);
+					}
+					else {
+						ackPacket.setSendTime(lastPacketSendTimeForCumulativeACK);
+						ackPacket.setRetransmitted(false);
+					}
+					
+					toLayer3(1, new Packet(ackPacket));		// udt_send
 				}
-				else {
-					ackPacket.setSendTime(lastPacketSendTimeForCumulativeACK);
-					ackPacket.setRetransmitted(false);
-				}
-				
-				toLayer3(1, new Packet(ackPacket));		// udt_send
 				
 				return ;
 			}
@@ -358,10 +394,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		// if the sequence number in [rcv_base - N, rcv_base - 1]
 		// then generate the ACK
 		else {
-			if ( traceLevel > 3 ) {
-				System.out.println("Generate the ACK again.");
-			}
-			
+			System.out.println("Generate the ACK again. SeqNum: " + seqNum);			
 			Packet ackPacket = new Packet(0, seqNum, 0);
 			ackPacket.setChecksum(getChecksumOfPacket(ackPacket));
 			ackPacket.setRetransmitted(true);	// statistics
@@ -376,7 +409,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 	protected void Simulation_done() {
 		
 		String lineBreaker = System.lineSeparator();
-		int originPacketsTransmittedByA = getMaxMessages();
+		int maxMessages = getMaxMessages();
 		int totalPacketsTransmittedByA = getPacketsTransmittedByA();
 		int nToLayer5 = getNtoLayer5();
 		int ACKSentByB = getACKSentByB();
@@ -387,7 +420,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		
 		/** ratio of lost packets */
 		double lostRatio = (retransmissionsByA - getACorrupt()) / 
-				(double)(originPacketsTransmittedByA + retransmissionsByA + ACKSentByB);
+				(double)(maxMessages + retransmissionsByA + ACKSentByB);
 		lostRatio = Math.round(lostRatio * 100 * 100) * 0.01;
 		
 		/** Ratio of corrupted packets */
@@ -410,7 +443,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		 * Average time between sending an original data packet 
 		 * and receiving its ACK, even if the data packet is retransmitted.
 		 * */
-		double averageCommunicationTime = (accumulativeCommunicationEndTime - accumulativeCommunicationStartTime) / originPacketsTransmittedByA;
+		double averageCommunicationTime = (accumulativeCommunicationEndTime - accumulativeCommunicationStartTime) / maxMessages;
 		
 		/**
 		 * TO PRINT THE STATISTICS, FILL IN THE DETAILS BY PUTTING VARIBALE NAMES. 
@@ -418,7 +451,7 @@ public class SelectiveRepeatSimulator extends NetworkSimulator {
 		 * */
 		System.out.println(lineBreaker);
 		System.out.println("===============STATISTICS=======================");
-		System.out.println("Number of original packets transmitted by A: " + originPacketsTransmittedByA);
+		System.out.println("Number of original packets transmitted by A: " + maxMessages);
 		System.out.println("Number of retransmissions by A: " + retransmissionsByA);
 		System.out.println("Number of data packets delivered to layer 5 at B: " + nToLayer5);
 		System.out.println("Number of ACK packets sent by B: " + ACKSentByB);

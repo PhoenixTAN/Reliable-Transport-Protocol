@@ -83,7 +83,7 @@ public class SelectiveRepeatSenderQueue<T> implements SlidingWindowQueue<T> {
 			baseNum++;
 			// update tail
 			tail = Math.min(windowSize, buffer.size());
-			nextSeqNumIndex = tail;	// be careful 
+			nextSeqNumIndex = Math.max(0, nextSeqNumIndex - 1);	// be careful 
 		}	
 	}
 	
