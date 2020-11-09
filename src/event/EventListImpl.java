@@ -1,9 +1,14 @@
-package basic;
+package event;
 
 import simulator.NetworkSimulator;
 
 import java.util.Vector;
 
+/**
+ * @author TA
+ * @description The implementation of the event list.
+ * Modified by Lighthousexxx. Add isEmpty() methods.
+ * */
 public class EventListImpl implements EventList {
 	private Vector<Event> data;
 

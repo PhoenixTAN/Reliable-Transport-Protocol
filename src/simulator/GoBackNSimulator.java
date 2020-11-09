@@ -1,15 +1,16 @@
 package simulator;
 
-import basic.Message;
-import basic.Packet;
-import utils.GoBackNReceiverQueue;
-import utils.GoBackNSenderQueue;
+import util.GoBackNReceiverQueue;
+import util.GoBackNSenderQueue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
+
+import packet.Message;
+import packet.Packet;
 
 
 /**

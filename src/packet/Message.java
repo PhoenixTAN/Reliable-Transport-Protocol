@@ -1,4 +1,4 @@
-package basic;
+package packet;
 
 import simulator.NetworkSimulator;
 

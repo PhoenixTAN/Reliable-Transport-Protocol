@@ -1,29 +1,34 @@
-package utils;
+package util;
 
 import java.util.ArrayList;
-import java.util.List;
 
-public class GoBackNReceiverQueue<T> implements SlidingWindowQueue<T>  {
+import packet.Packet;
+
+public class GoBackNSenderQueue<T> implements SlidingWindowQueue<T>  {
     private ArrayList<T> buffer;
 
     protected int tail;
     protected int windowSize;
 
-    private List<Integer> expectedSeqNumArray;
-    private int expectedSeqNum;
+    private int curSeqNum;
+    private int nextIndex;
 
 
-    public GoBackNReceiverQueue(int _windowSize) {
+    public GoBackNSenderQueue(int _windowSize) {
         windowSize = _windowSize;
         buffer = new ArrayList<T>(_windowSize);
         tail = 0;
-        expectedSeqNumArray = new ArrayList<>(_windowSize);
-        for(int i = 0; i < _windowSize; i++){
-            expectedSeqNumArray.add(i);
-        }
+        curSeqNum = 0;
+        nextIndex = 0;
     }
 
+    public int getNextIndex() {
+        return nextIndex;
+    }
 
+    public void setNextIndex(int nextIndex) {
+        this.nextIndex = nextIndex;
+    }
 
     public T getDatabyIndex(int index) {
         if(index >= buffer.size()){
@@ -99,41 +104,15 @@ public class GoBackNReceiverQueue<T> implements SlidingWindowQueue<T>  {
         return tail;
     }
 
+    public int getCurSeqNum() {
+        return curSeqNum;
+    }
+
+    public void setCurSeqNum(int curSeqNum) {
+        this.curSeqNum = curSeqNum;
+    }
 
     public boolean isBufferFull() {
         return buffer.size() >= 5;
     }
-
-    public boolean isExpected(int seqNum){
-        for(int i = 0; i < expectedSeqNumArray.size(); i++){
-            if(expectedSeqNumArray.get(i) == seqNum){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public int getExpectedSeqNum() {
-        return expectedSeqNum;
-    }
-
-    public void setExpectedSeqNum(int expectedSeqNum) {
-        this.expectedSeqNum = expectedSeqNum;
-    }
-
-    public void updateExpectedSeqArray() {
-        expectedSeqNumArray.remove(0);
-        int nextMaxSeqNum = expectedSeqNumArray.get(expectedSeqNumArray.size() - 1);
-        nextMaxSeqNum = nextMaxSeqNum + 1 == windowSize * 2 ? 0 : nextMaxSeqNum + 1;
-        expectedSeqNumArray.add(nextMaxSeqNum);
-    }
-
-    public List<Integer> getExpectedSeqNumArray() {
-        return expectedSeqNumArray;
-    }
-
-    public void updateTail(){
-        tail = Math.min(windowSize, buffer.size());
-    }
 }
-

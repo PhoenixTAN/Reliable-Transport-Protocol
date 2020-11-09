@@ -3,10 +3,10 @@ package simulator;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
-import basic.Message;
-import basic.Packet;
-import utils.SelectiveRepeatReceiverQueue;
-import utils.SelectiveRepeatSenderQueue;
+import packet.Message;
+import packet.Packet;
+import util.SelectiveRepeatReceiverQueue;
+import util.SelectiveRepeatSenderQueue;
 
 
 /**

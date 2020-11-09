@@ -1,4 +1,4 @@
-package utils;
+package util;
 
 /**
  * @author CS-655

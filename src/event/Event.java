@@ -1,7 +1,11 @@
-package basic;
+package event;
 
+import packet.Packet;
 import simulator.NetworkSimulator;
 
+/**
+ * @author TA
+ * */
 public class Event {
 	
 	private double time;

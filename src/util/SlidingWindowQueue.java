@@ -1,4 +1,4 @@
-package utils;
+package util;
 
 /**
  * Author: Ziqi Tan

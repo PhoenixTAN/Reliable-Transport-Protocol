@@ -1,7 +1,10 @@
-package basic;
+package event;
 
-import basic.Event;
 
+/**
+ * @author TA
+ * Modified by Phoenix TAN and Lighthousexxx. We add isEmpty() method.
+ * */
 public interface EventList {
 	public boolean add(Event e);
 
@@ -13,5 +16,5 @@ public interface EventList {
 
 	public double getLastPacketTime(int entityTo);
 
-	public boolean isEmpty();
+	public boolean isEmpty();	
 }

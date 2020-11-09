@@ -1,9 +1,12 @@
 package simulator;
 
-import basic.*;
-import utils.OSIRandom;
+import packet.Message;
+import packet.Packet;
+import util.OSIRandom;
 
 import java.io.*;
+
+import event.*;
 
 
 public abstract class NetworkSimulator {
