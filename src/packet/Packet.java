@@ -16,7 +16,7 @@ public class Packet {
 	
 	private int seqnum;
 	private int acknum;
-	private long checksum;		/** modified by Ziqi Tan */
+	private long checksum;		/** modified by Phoenix TAN */
 	private String payload;
 	private boolean flag; // if there are optional field used, like sACK
 	private List<Integer> sACK;

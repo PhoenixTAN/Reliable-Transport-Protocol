@@ -10,7 +10,7 @@ import util.SelectiveRepeatSenderQueue;
 
 
 /**
- * @author: Ziqi Tan
+ * @author: Phoenix TAN
  * @description:
  * 		1. Your protocol should use only ACK (i.e. no NACK) packets. 
  * 		2. The receiver should be able to buffer out-of-order (OOO) packets, 

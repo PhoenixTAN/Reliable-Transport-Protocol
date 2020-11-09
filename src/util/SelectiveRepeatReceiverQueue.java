@@ -2,7 +2,7 @@ package util;
 
 
 /**
- * Author: Ziqi Tan
+ * Author: Phoenix TAN
  */
 public class SelectiveRepeatReceiverQueue<T> {
 

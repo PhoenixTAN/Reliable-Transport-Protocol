@@ -14,7 +14,7 @@ import packet.Packet;
 
 
 /**
- * Author: Xueyan Xia
+ * Author: Lighthousexxx
  * */
 public class GoBackNSimulator extends NetworkSimulator {
     /**

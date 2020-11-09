@@ -1,7 +1,7 @@
 package util;
 
 /**
- * Author: Ziqi Tan
+ * Author: Phoenix TAN
  */
 
 public interface SlidingWindowQueue<T> {

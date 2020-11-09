@@ -3,7 +3,7 @@ package util;
 import java.util.ArrayList;
 
 /**
- * Author: Ziqi Tan
+ * Author: Phoenix TAN
  */
 public class SelectiveRepeatSenderQueue<T> implements SlidingWindowQueue<T> {
 	
